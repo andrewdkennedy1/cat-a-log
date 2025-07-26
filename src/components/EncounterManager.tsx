@@ -2,12 +2,12 @@
  * EncounterManager - Main component that integrates map, form, and encounter management
  */
 
-import React, { useState, useCallback, useEffect, Suspense } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Map } from './Map';
 import { EncounterForm } from './EncounterForm';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 import { DataManagement } from './DataManagement';
-const Settings = React.lazy(() => import('./Settings').then(module => ({ default: module.Settings })));
+import { Settings } from './Settings';
 import { useEncounters } from '../hooks/useEncounters';
 import { useUI } from '../hooks/useUI';
 import { storageService } from '../services/StorageService';
@@ -265,12 +265,11 @@ export function EncounterManager() {
       {isSettingsOpen && (
         <div className="modal-overlay" onClick={() => setIsSettingsOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <Suspense fallback={<div>Loading...</div>}>
-              <Settings
-                preferences={state.user.preferences}
-                onPreferencesChange={handlePreferencesChange}
-              />
-            </Suspense>
+            <Settings
+              preferences={state.user.preferences}
+              onPreferencesChange={handlePreferencesChange}
+              showSnackbar={showSnackbar}
+            />
             <button onClick={() => setIsSettingsOpen(false)} className="btn btn-primary" style={{marginTop: '20px'}}>Close</button>
           </div>
         </div>

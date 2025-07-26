@@ -7,8 +7,10 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import 'leaflet.markercluster';
 import type { MapProps, CatEncounter } from '../types';
 import { useUI } from '../hooks/useUI';
+import { useGeolocation } from '../hooks/useGeolocation';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 import { EncounterInfoCard } from './EncounterInfoCard';
+import { LocationButton } from './LocationButton';
 import { storageService } from '../services/StorageService';
 
 // Declare global window functions for popup buttons
@@ -61,6 +63,27 @@ const createPawIcon = (color: string, isSelected: boolean = false) => {
   });
 };
 
+// Create user location marker icon
+const createUserLocationIcon = (accuracy?: number) => {
+  const isHighAccuracy = accuracy && accuracy <= 50;
+  const color = isHighAccuracy ? '#4285f4' : '#ffa500';
+  const size = 16;
+  
+  const locationSvg = `
+    <svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="8" fill="${color}" stroke="#fff" stroke-width="3"/>
+      <circle cx="12" cy="12" r="3" fill="#fff"/>
+    </svg>
+  `;
+  
+  return L.divIcon({
+    html: locationSvg,
+    className: 'user-location-marker',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  });
+};
+
 interface ExtendedMapProps extends MapProps {
   onEncounterEdit?: (encounter: CatEncounter) => void;
   onEncounterDelete?: (encounter: CatEncounter) => void;
@@ -78,11 +101,31 @@ export const Map: FC<ExtendedMapProps> = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.LayerGroup<L.Marker> | null>(null);
+  const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const { selectedEncounter } = useUI();
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [encounterToDelete, setEncounterToDelete] = useState<CatEncounter | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hasInitializedLocation, setHasInitializedLocation] = useState(false);
+
+  // Use geolocation hook with watch enabled for mobile devices
+  const {
+    position,
+    error: geoError,
+    loading: geoLoading,
+    getCurrentPosition,
+    getCoordinates,
+    getAccuracy,
+    isMobile,
+    supported: geoSupported,
+    usingIpGeolocation
+  } = useGeolocation({
+    watch: true,
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 30000 // 30 seconds
+  });
 
   // Load photo thumbnail for encounter
   const loadPhotoThumbnail = useCallback(async (encounter: CatEncounter) => {
@@ -266,6 +309,56 @@ export const Map: FC<ExtendedMapProps> = ({
     });
   }, [encounters, loadPhotoThumbnail]);
 
+  // Update user location marker when GPS position changes
+  useEffect(() => {
+    if (!mapInstanceRef.current || !position) return;
+
+    const coordinates = getCoordinates();
+    if (!coordinates) return;
+
+    const [lat, lng] = coordinates;
+    const accuracy = getAccuracy();
+
+    // Remove existing user location marker
+    if (userLocationMarkerRef.current) {
+      mapInstanceRef.current.removeLayer(userLocationMarkerRef.current);
+    }
+
+    // Create new user location marker
+    const userMarker = L.marker([lat, lng], {
+      icon: createUserLocationIcon(accuracy || undefined),
+      zIndexOffset: 1000 // Ensure user location appears above other markers
+    });
+
+    // Add tooltip showing accuracy and source
+    const accuracyText = usingIpGeolocation
+      ? 'Your location (IP based)'
+      : accuracy
+      ? `Your location (±${Math.round(accuracy)}m)`
+      : 'Your location';
+
+    userMarker.bindTooltip(accuracyText, {
+      permanent: false,
+      direction: 'top'
+    });
+
+    userMarker.addTo(mapInstanceRef.current);
+    userLocationMarkerRef.current = userMarker;
+
+    // Center map on user location for mobile devices on first GPS fix
+    if (isMobile && !hasInitializedLocation) {
+      mapInstanceRef.current.setView([lat, lng], 16);
+      setHasInitializedLocation(true);
+    }
+  }, [position, getCoordinates, getAccuracy, isMobile, hasInitializedLocation]);
+
+  // Request location permission on mobile devices
+  useEffect(() => {
+    if (isMobile && geoSupported && !position && !geoError) {
+      getCurrentPosition();
+    }
+  }, [isMobile, geoSupported, position, geoError, getCurrentPosition]);
+
   // Update markers when encounters change - use a ref to track if we need to update
   const lastEncountersRef = useRef<string>('');
   const lastSelectedRef = useRef<string | undefined>('');
@@ -359,11 +452,42 @@ export const Map: FC<ExtendedMapProps> = ({
     };
   }, [photoUrls]);
 
+  // Handle location button click
+  const handleLocationButtonClick = useCallback((lat: number, lng: number) => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([lat, lng], 16);
+    }
+  }, []);
+
   return (
-    <div className="map-container">
+    <div style={{ height: '100%', width: '100%', position: 'relative' }}>
       <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
       
-      {/* Delete confirmation dialog */}
+      {/* Location Button */}
+      <LocationButton onLocationFound={handleLocationButtonClick} />
+      
+      {/* GPS Status Indicator for Mobile */}
+      {isMobile && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            background: 'rgba(255, 255, 255, 0.9)',
+            padding: '8px 12px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            zIndex: 1000,
+            display: geoLoading || geoError ? 'block' : 'none'
+          }}
+        >
+          {geoLoading && '📍 Getting location...'}
+          {geoError && !usingIpGeolocation && '❌ Location unavailable'}
+          {usingIpGeolocation && '📍 Using approximate location'}
+        </div>
+      )}
+      
+      {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={deleteDialogOpen}
         encounterInfo={encounterToDelete ? {

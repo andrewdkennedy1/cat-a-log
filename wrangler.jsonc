@@ -6,7 +6,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "cat-a-log",
 	"main": "worker/index.ts",
-	"compatibility_date": "2025-07-26",
+	"compatibility_date": "2025-07-12",
 	"assets": {
 		"not_found_handling": "single-page-application"
 	},
@@ -16,9 +16,6 @@
 	"dev": {
 		"ip": "127.0.0.1",
 		"port": 8788
-	},
-	"build": {
-		"command": "npm run build"
 	}
 	/**
 	 * Smart Placement
