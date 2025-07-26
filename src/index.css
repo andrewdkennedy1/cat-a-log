@@ -255,6 +255,13 @@ button:focus-visible {
   background: none !important;
   border: none !important;
   box-shadow: none !important;
+  pointer-events: auto !important;
+  z-index: 1000 !important;
+}
+
+.paw-marker svg {
+  pointer-events: auto !important;
+  display: block !important;
 }
 
 /* Encounter Popup Styles */

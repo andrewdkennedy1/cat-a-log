@@ -77,8 +77,8 @@ export const Map: React.FC<ExtendedMapProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.MarkerClusterGroup | null>(null);
-  const { selectedEncounter, setMapCenter, setMapZoom } = useUI();
+  const markersRef = useRef<L.LayerGroup | null>(null);
+  const { selectedEncounter } = useUI();
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [encounterToDelete, setEncounterToDelete] = useState<CatEncounter | null>(null);
@@ -158,24 +158,15 @@ export const Map: React.FC<ExtendedMapProps> = ({
     root.render(
       <EncounterInfoCard
         encounter={encounter}
-        onEdit={handleEncounterEdit}
-        onDelete={handleEncounterDelete}
+        onEdit={(enc) => onEncounterEdit?.(enc)}
+        onDelete={(enc) => onEncounterDelete?.(enc)}
         className="map-popup-card"
       />
     );
 
     return container;
-  }, [handleEncounterEdit, handleEncounterDelete]);
+  }, [onEncounterEdit, onEncounterDelete]);
 
-  // Handle map view changes for persistence
-  const handleMapMoveEnd = useCallback(() => {
-    if (mapInstanceRef.current) {
-      const center = mapInstanceRef.current.getCenter();
-      const zoom = mapInstanceRef.current.getZoom();
-      setMapCenter([center.lat, center.lng]);
-      setMapZoom(zoom);
-    }
-  }, [setMapCenter, setMapZoom]);
 
   // Initialize map
   useEffect(() => {
@@ -200,8 +191,8 @@ export const Map: React.FC<ExtendedMapProps> = ({
 
     map.addLayer(markers);
 
-    // Add map move end handler for persistence
-    map.on('moveend', handleMapMoveEnd);
+    // Remove map move end handler to prevent re-render loops
+    // map.on('moveend', handleMapMoveEnd);
 
     // Add long-press handler for mobile
     let longPressTimer: NodeJS.Timeout;
@@ -238,8 +229,12 @@ export const Map: React.FC<ExtendedMapProps> = ({
       // Only trigger location selection if clicking on empty map area
       // Check if the click target is the map container itself (not a marker or other element)
       const target = e.originalEvent?.target as HTMLElement;
-      if (target && target.classList.contains('leaflet-container')) {
-        onLocationSelect(e.latlng.lat, e.latlng.lng);
+      if (target && (target.classList.contains('leaflet-container') || target.classList.contains('leaflet-zoom-animated'))) {
+        // Additional check to ensure we're not clicking on a marker
+        const isMarkerClick = target.closest('.leaflet-marker-icon') || target.closest('.paw-marker');
+        if (!isMarkerClick) {
+          onLocationSelect(e.latlng.lat, e.latlng.lng);
+        }
       }
     };
 
@@ -258,23 +253,9 @@ export const Map: React.FC<ExtendedMapProps> = ({
     };
     // The map should only be initialized once.
     // `center` and `zoom` are only used for the initial view.
-    // `onLocationSelect` and `handleMapMoveEnd` should be stable callbacks.
-  }, [center, zoom, onLocationSelect, handleMapMoveEnd]);
+    // `onLocationSelect` should be stable callback.
+  }, [center, zoom, onLocationSelect]);
 
-  // Update map center and zoom when props change
-  useEffect(() => {
-    if (mapInstanceRef.current) {
-      const currentCenter = mapInstanceRef.current.getCenter();
-      const currentZoom = mapInstanceRef.current.getZoom();
-
-      // Prevent re-running setView if the map is already at the correct position.
-      // This is crucial to break the infinite loop:
-      // setView -> moveend event -> handleMapMoveEnd -> setMapCenter -> re-render -> useEffect -> setView
-      if (currentZoom !== zoom || currentCenter.lat !== center[0] || currentCenter.lng !== center[1]) {
-        mapInstanceRef.current.setView(center, zoom);
-      }
-    }
-  }, [center, zoom]);
 
   // Load photo thumbnails for encounters with photos
   useEffect(() => {
@@ -285,9 +266,24 @@ export const Map: React.FC<ExtendedMapProps> = ({
     });
   }, [encounters, loadPhotoThumbnail]);
 
-  // Update markers when encounters change
+  // Update markers when encounters change - use a ref to track if we need to update
+  const lastEncountersRef = useRef<string>('');
+  const lastSelectedRef = useRef<string | undefined>('');
+
   useEffect(() => {
-    if (!markersRef.current) return;
+    if (!markersRef.current || !mapInstanceRef.current) return;
+
+    // Create a stable key for encounters to avoid unnecessary updates
+    const encountersKey = encounters.map(e => `${e.id}-${e.lat}-${e.lng}-${e.catColor}`).join('|');
+    const selectedKey = selectedEncounter;
+
+    // Only update if encounters or selection actually changed
+    if (lastEncountersRef.current === encountersKey && lastSelectedRef.current === selectedKey) {
+      return;
+    }
+
+    lastEncountersRef.current = encountersKey;
+    lastSelectedRef.current = selectedKey;
 
     // Clear existing markers
     markersRef.current.clearLayers();
@@ -300,9 +296,11 @@ export const Map: React.FC<ExtendedMapProps> = ({
 
       const marker = L.marker([encounter.lat, encounter.lng], {
         icon,
-        // Ensure markers stay visible during scrolling
+        // Ensure markers stay visible during scrolling and interactions
         riseOnHover: true,
-        keyboard: false
+        keyboard: false,
+        interactive: true,
+        bubblingMouseEvents: false
       });
 
       // Create popup content with photo thumbnail
@@ -311,15 +309,22 @@ export const Map: React.FC<ExtendedMapProps> = ({
 
       // Add click handler
       marker.on('click', (e: L.LeafletMouseEvent) => {
+        // Prevent the map click event from firing
         L.DomEvent.stopPropagation(e);
-        e.originalEvent?.stopPropagation?.();
-        onEncounterSelect(encounter);
+        if (e.originalEvent) {
+          e.originalEvent.stopPropagation();
+          e.originalEvent.preventDefault();
+        }
+        // Use a stable reference to prevent recreating markers
+        if (onEncounterSelect) {
+          onEncounterSelect(encounter);
+        }
         marker.openPopup();
       });
 
       markersRef.current!.addLayer(marker);
     });
-  }, [encounters, selectedEncounter, onEncounterSelect, createPopupContent]);
+  }, [encounters, selectedEncounter]);
 
   // Global functions for popup buttons
   useEffect(() => {
