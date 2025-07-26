@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import ReactDOM from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -7,6 +8,16 @@ import 'leaflet.markercluster';
 import type { MapProps, CatEncounter } from '../types';
 import { useUI } from '../hooks/useUI';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
+import { EncounterInfoCard } from './EncounterInfoCard';
+import { storageService } from '../services/StorageService';
+
+// Declare global window functions for popup buttons
+declare global {
+  interface Window {
+    editEncounter: (id: string) => void;
+    deleteEncounter: (id: string) => void;
+  }
+}
 
 // Color mapping for cat colors to marker colors
 const COLOR_MAP: Record<string, string> = {
@@ -80,19 +91,21 @@ export const Map: React.FC<ExtendedMapProps> = ({
     }
 
     try {
-      // This would normally use the StorageService to get the photo
-      // For now, we'll create a placeholder
-      const photoUrl = `data:image/svg+xml;base64,${btoa(`
-        <svg width="60" height="60" xmlns="http://www.w3.org/2000/svg">
-          <rect width="60" height="60" fill="#f0f0f0" stroke="#ccc"/>
-          <text x="30" y="35" text-anchor="middle" font-size="12" fill="#666">Photo</text>
-        </svg>
-      `)}`;
+      // Get actual photo from storage service
+      const blob = await storageService.getPhoto(encounter.photoBlobId);
+      if (!blob) return;
+      // Create object URL for the blob
+      const photoUrl = URL.createObjectURL(blob);
       
       setPhotoUrls(prev => ({
         ...prev,
         [encounter.photoBlobId!]: photoUrl
       }));
+      
+      // Cleanup URL when component unmounts or photo changes
+      return () => {
+        URL.revokeObjectURL(photoUrl);
+      };
     } catch (error) {
       console.error('Failed to load photo thumbnail:', error);
     }
@@ -136,51 +149,22 @@ export const Map: React.FC<ExtendedMapProps> = ({
 
   // Create popup content with EncounterInfoCard
   const createPopupContent = useCallback((encounter: CatEncounter) => {
-    // Create a temporary container for the React component
     const container = document.createElement('div');
     container.style.minWidth = '250px';
-    
-    // We'll render the EncounterInfoCard as HTML for now
-    // In a more advanced implementation, we could use ReactDOM.render
-    const photoHtml = encounter.photoBlobId && photoUrls[encounter.photoBlobId]
-      ? `<div class="encounter-photo" style="margin-bottom: 12px;">
-           <img src="${photoUrls[encounter.photoBlobId]}" alt="Cat photo" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" />
-         </div>`
-      : '';
 
-    const formattedDate = new Date(encounter.dateTime).toLocaleDateString();
-    const formattedTime = new Date(encounter.dateTime).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-
-    container.innerHTML = `
-      <div class="encounter-popup" style="font-family: system-ui, -apple-system, sans-serif;">
-        ${photoHtml}
-        <div class="encounter-details">
-          <div class="encounter-header" style="margin-bottom: 8px;">
-            <h3 style="margin: 0; font-size: 1.1rem;">${encounter.catColor} ${encounter.catType}</h3>
-            <div style="font-size: 0.875rem; color: #666;">${formattedDate} at ${formattedTime}</div>
-          </div>
-          <div style="margin-bottom: 8px;"><strong>Behavior:</strong> ${encounter.behavior}</div>
-          ${encounter.comment ? `<div style="margin-bottom: 8px;"><strong>Comment:</strong><br><span style="font-size: 0.875rem;">${encounter.comment}</span></div>` : ''}
-          <div style="font-size: 0.875rem; color: #666; margin-bottom: 12px;">
-            <strong>Location:</strong> ${encounter.lat.toFixed(6)}, ${encounter.lng.toFixed(6)}
-          </div>
-        </div>
-        <div class="encounter-actions" style="display: flex; gap: 8px; padding-top: 12px; border-top: 1px solid #eee;">
-          <button class="btn btn-primary btn-sm" onclick="window.editEncounter('${encounter.id}')" style="flex: 1; padding: 6px 12px; border: 1px solid #007bff; background: #007bff; color: white; border-radius: 4px; cursor: pointer;">
-            Edit
-          </button>
-          <button class="btn btn-danger btn-sm" onclick="window.deleteEncounter('${encounter.id}')" style="flex: 1; padding: 6px 12px; border: 1px solid #dc3545; background: #dc3545; color: white; border-radius: 4px; cursor: pointer;">
-            Delete
-          </button>
-        </div>
-      </div>
-    `;
+    // Render the EncounterInfoCard React component into the container
+    const root = ReactDOM.createRoot(container);
+    root.render(
+      <EncounterInfoCard
+        encounter={encounter}
+        onEdit={handleEncounterEdit}
+        onDelete={handleEncounterDelete}
+        className="map-popup-card"
+      />
+    );
 
     return container;
-  }, [photoUrls]);
+  }, [handleEncounterEdit, handleEncounterDelete]);
 
   // Handle map view changes for persistence
   const handleMapMoveEnd = useCallback(() => {
@@ -353,6 +337,14 @@ export const Map: React.FC<ExtendedMapProps> = ({
       window.deleteEncounter = () => {};
     };
   }, [encounters, handleEncounterEdit, handleEncounterDelete]);
+
+  // Cleanup photo URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Revoke all photo URLs to prevent memory leaks
+      Object.values(photoUrls).forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [photoUrls]);
 
   return (
     <div className="map-container">
