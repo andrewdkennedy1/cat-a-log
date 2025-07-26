@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { Settings, Palette, Cloud, Download, Upload, Smartphone, Monitor, Sun, Moon } from 'lucide-react';
+import { Palette, Cloud, Download, Upload, Smartphone, Monitor, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';

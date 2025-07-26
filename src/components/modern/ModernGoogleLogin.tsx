@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { googleDriveService } from '@/services/GoogleDriveService';
 import { useUser } from '@/hooks/useUser';
-import { cn } from '@/lib/utils';
 
 export function ModernGoogleLogin() {
   const [isLoading, setIsLoading] = useState(false);

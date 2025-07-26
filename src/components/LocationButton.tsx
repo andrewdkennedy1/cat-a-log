@@ -12,7 +12,7 @@ interface LocationButtonProps {
 
 export function LocationButton({ onLocationFound, className = '' }: LocationButtonProps) {
   const [isLocating, setIsLocating] = useState(false);
-  const { getCurrentPosition, getCoordinates, supported, isMobile } = useGeolocation();
+  const { getCurrentPosition, getCoordinates, supported } = useGeolocation();
 
   const handleLocationClick = async () => {
     if (!supported) {
