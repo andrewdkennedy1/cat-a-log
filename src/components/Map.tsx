@@ -77,8 +77,8 @@ export const Map: FC<ExtendedMapProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.LayerGroup<any> | null>(null);
-  const { selectedEncounter, setMapCenter, setMapZoom } = useUI();
+  const markersRef = useRef<L.LayerGroup<L.Marker> | null>(null);
+  const { selectedEncounter } = useUI();
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [encounterToDelete, setEncounterToDelete] = useState<CatEncounter | null>(null);
@@ -324,7 +324,7 @@ export const Map: FC<ExtendedMapProps> = ({
 
       markersRef.current!.addLayer(marker);
     });
-  }, [encounters, selectedEncounter]);
+  }, [encounters, selectedEncounter, createPopupContent, onEncounterSelect]);
 
   // Global functions for popup buttons
   useEffect(() => {
