@@ -151,6 +151,7 @@ export const Map: React.FC<ExtendedMapProps> = ({
   const createPopupContent = useCallback((encounter: CatEncounter) => {
     const container = document.createElement('div');
     container.style.minWidth = '250px';
+    container.style.padding = '8px';
 
     // Render the EncounterInfoCard React component into the container
     const root = ReactDOM.createRoot(container);
@@ -194,14 +195,8 @@ export const Map: React.FC<ExtendedMapProps> = ({
       maxZoom: 19
     }).addTo(map);
 
-    // Initialize marker cluster group
-    const markers = L.markerClusterGroup({
-      chunkedLoading: true,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
-      maxClusterRadius: 50
-    });
+    // Use a regular layer group instead of clustering to prevent disappearing markers
+    const markers = L.layerGroup();
 
     map.addLayer(markers);
 
@@ -240,7 +235,12 @@ export const Map: React.FC<ExtendedMapProps> = ({
         L.DomEvent.stopPropagation(e);
         return;
       }
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
+      // Only trigger location selection if clicking on empty map area
+      // Check if the click target is the map container itself (not a marker or other element)
+      const target = e.originalEvent?.target as HTMLElement;
+      if (target && target.classList.contains('leaflet-container')) {
+        onLocationSelect(e.latlng.lat, e.latlng.lng);
+      }
     };
 
     map.on('mousedown', handleMouseDown);
@@ -298,7 +298,12 @@ export const Map: React.FC<ExtendedMapProps> = ({
       const isSelected = selectedEncounter === encounter.id;
       const icon = createPawIcon(color, isSelected);
 
-      const marker = L.marker([encounter.lat, encounter.lng], { icon });
+      const marker = L.marker([encounter.lat, encounter.lng], {
+        icon,
+        // Ensure markers stay visible during scrolling
+        riseOnHover: true,
+        keyboard: false
+      });
 
       // Create popup content with photo thumbnail
       const popupContent = createPopupContent(encounter);
@@ -306,9 +311,10 @@ export const Map: React.FC<ExtendedMapProps> = ({
 
       // Add click handler
       marker.on('click', (e: L.LeafletMouseEvent) => {
-        // Prevent the map's click handler from also firing
         L.DomEvent.stopPropagation(e);
+        e.originalEvent?.stopPropagation?.();
         onEncounterSelect(encounter);
+        marker.openPopup();
       });
 
       markersRef.current!.addLayer(marker);
