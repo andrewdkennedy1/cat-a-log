@@ -2,7 +2,7 @@
  * PhotoInput - Component for photo capture, preview, and management
  */
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { 
   resizeImage, 
   shouldResizeImage, 

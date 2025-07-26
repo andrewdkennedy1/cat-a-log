@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, type FC } from 'react';
 import ReactDOM from 'react-dom/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -66,7 +66,7 @@ interface ExtendedMapProps extends MapProps {
   onEncounterDelete?: (encounter: CatEncounter) => void;
 }
 
-export const Map: React.FC<ExtendedMapProps> = ({
+export const Map: FC<ExtendedMapProps> = ({
   encounters,
   onLocationSelect,
   onEncounterSelect,
@@ -77,7 +77,7 @@ export const Map: React.FC<ExtendedMapProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.MarkerClusterGroup | null>(null);
+  const markersRef = useRef<L.LayerGroup<any> | null>(null);
   const { selectedEncounter, setMapCenter, setMapZoom } = useUI();
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

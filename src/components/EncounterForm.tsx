@@ -2,7 +2,7 @@
  * EncounterForm - Modal component for creating and editing cat encounters
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { EncounterFormProps, CatEncounter } from '../types';
 import { 
   CAT_COLORS,
@@ -16,7 +16,6 @@ import {
   type CatType
 } from '../models/CatEncounter';
 import { useAppContext } from '../context/AppContext';
-import { getCurrentTimestamp } from '../utils/dataUtils';
 import { PhotoInput } from './PhotoInput';
 import { storageService } from '../services/StorageService';
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import type { ChangeEvent } from 'react';
 import type { UserPreferences } from '../types';
 
 interface SettingsProps {
@@ -9,7 +9,7 @@ interface SettingsProps {
 import { syncService } from '../services/SyncService';
 
 export function Settings({ preferences, onPreferencesChange }: SettingsProps) {
-  const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleThemeChange = (e: ChangeEvent<HTMLSelectElement>) => {
     onPreferencesChange({ theme: e.target.value as 'auto' | 'light' | 'dark' });
   };
 

@@ -2,7 +2,7 @@
  * Example usage of EncounterForm component
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { EncounterForm } from './EncounterForm';
 import type { CatEncounter } from '../types';
 

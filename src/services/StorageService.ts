@@ -302,7 +302,11 @@ export class StorageService implements IStorageService {
       defaultMapZoom: 13,
       autoSync: true,
       photoQuality: 'medium',
-      theme: 'auto'
+      theme: 'auto',
+      customCatColors: [],
+      customCoatLengths: [],
+      customCatTypes: [],
+      customBehaviors: []
     };
     
     return { ...defaults, ...stored };
