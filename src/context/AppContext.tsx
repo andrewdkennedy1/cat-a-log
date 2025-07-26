@@ -2,9 +2,10 @@
  * Global application state management using React Context and useReducer
  */
 
-import { createContext, useContext, useReducer } from 'react';
+import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode, Dispatch } from 'react';
 import type { CatEncounter, UserPreferences, AppState } from '../types';
+import { storageService } from '../services/StorageService';
 
 // Action types for the reducer
 export type AppAction =
@@ -218,6 +219,19 @@ interface AppProviderProps {
 
 export function AppProvider({ children, showSnackbar }: AppProviderProps) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  useEffect(() => {
+    const loadEncounters = async () => {
+      try {
+        const encounters = await storageService.getEncounters();
+        dispatch({ type: 'SET_ENCOUNTERS', payload: encounters });
+      } catch (error) {
+        console.error('Failed to load encounters from storage:', error);
+        showSnackbar('Failed to load encounters.', 'error');
+      }
+    };
+    loadEncounters();
+  }, [dispatch, showSnackbar]);
 
   return (
     <AppContext.Provider value={{ state, dispatch, showSnackbar }}>

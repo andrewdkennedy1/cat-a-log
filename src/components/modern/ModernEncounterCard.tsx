@@ -2,10 +2,12 @@
  * Modern EncounterCard component using shadcn/ui
  */
 
-import { Calendar, MapPin, Palette, Scissors, Cat, MessageSquare, Edit, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Palette, Scissors, Cat, MessageSquare, Edit, Trash2, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { storageService } from '@/services/StorageService';
+import { useState, useEffect } from 'react';
 import type { CatEncounter } from '@/types';
 
 interface ModernEncounterCardProps {
@@ -13,14 +15,43 @@ interface ModernEncounterCardProps {
   onEdit?: (encounter: CatEncounter) => void;
   onDelete?: (encounter: CatEncounter) => void;
   className?: string;
+  compact?: boolean;
 }
 
 export function ModernEncounterCard({ 
   encounter, 
   onEdit, 
   onDelete, 
-  className 
+  className,
+  compact = false
 }: ModernEncounterCardProps) {
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPhoto = async () => {
+      if (encounter.photoBlobId) {
+        try {
+          const blob = await storageService.getPhoto(encounter.photoBlobId);
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            setPhotoUrl(url);
+          }
+        } catch (error) {
+          console.error('Failed to load photo:', error);
+        }
+      }
+    };
+
+    loadPhoto();
+
+    // Cleanup URL when component unmounts
+    return () => {
+      if (photoUrl) {
+        URL.revokeObjectURL(photoUrl);
+      }
+    };
+  }, [encounter.photoBlobId]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -55,11 +86,44 @@ export function ModernEncounterCard({
   };
 
   return (
-    <Card className={cn("w-full max-w-sm", className)}>
-      <CardHeader className="pb-3">
+    <Card className={cn("w-full max-w-sm overflow-hidden", className)}>
+      {/* Photo Section */}
+      {photoUrl && (
+        <div className={cn("relative", compact ? "h-32" : "h-48")}>
+          <img
+            src={photoUrl}
+            alt={`Cat encounter - ${encounter.catType}`}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute top-2 right-2 flex gap-1">
+            {onEdit && (
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 bg-background/80 backdrop-blur"
+                onClick={() => onEdit(encounter)}
+              >
+                <Edit className="h-3 w-3" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-8 w-8 bg-background/80 backdrop-blur text-destructive hover:text-destructive"
+                onClick={() => onDelete(encounter)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <CardHeader className={cn("pb-3", photoUrl ? "pt-3" : "")}>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className={cn("flex items-center gap-2", compact ? "text-base" : "text-lg")}>
               <Cat className="h-4 w-4 text-primary" />
               <span className="capitalize">{encounter.catType}</span>
             </CardTitle>
@@ -68,34 +132,36 @@ export function ModernEncounterCard({
               {formatDate(encounter.dateTime)}
             </CardDescription>
           </div>
-          <div className="flex gap-1">
-            {onEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => onEdit(encounter)}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => onDelete(encounter)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
+          {!photoUrl && (
+            <div className="flex gap-1">
+              {onEdit && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onEdit(encounter)}
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={() => onDelete(encounter)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className={cn("space-y-3", compact ? "space-y-2" : "")}>
         {/* Cat Details */}
-        <div className="space-y-2">
+        <div className={cn("space-y-2", compact ? "space-y-1" : "")}>
           <div className="flex items-center gap-2">
             <Palette className="h-3 w-3 text-muted-foreground" />
             <span
@@ -120,13 +186,15 @@ export function ModernEncounterCard({
         </div>
 
         {/* Location */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <MapPin className="h-3 w-3" />
-          <span>{formatCoordinates(encounter.lat, encounter.lng)}</span>
-        </div>
+        {!compact && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <MapPin className="h-3 w-3" />
+            <span>{formatCoordinates(encounter.lat, encounter.lng)}</span>
+          </div>
+        )}
 
         {/* Comment */}
-        {encounter.comment && (
+        {encounter.comment && !compact && (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-3 w-3 text-muted-foreground" />
@@ -138,11 +206,19 @@ export function ModernEncounterCard({
           </div>
         )}
 
-        {/* Photo indicator */}
-        {encounter.photoBlobId && (
+        {/* Photo indicator for cards without photos */}
+        {!photoUrl && encounter.photoBlobId && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>Photo attached</span>
+            <Camera className="h-3 w-3" />
+            <span>Photo loading...</span>
+          </div>
+        )}
+
+        {/* No photo indicator */}
+        {!photoUrl && !encounter.photoBlobId && compact && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Camera className="h-3 w-3" />
+            <span>No photo</span>
           </div>
         )}
       </CardContent>

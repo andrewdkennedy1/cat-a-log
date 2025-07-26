@@ -56,6 +56,9 @@ export function ModernEncounterForm({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Check if form is valid
+  const isValid = formData.catColor && formData.coatLength && formData.catType && formData.behavior;
+
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -98,7 +101,10 @@ export function ModernEncounterForm({
       return;
     }
 
-    if (!location && !initialData) {
+    // For new encounters, require either a location or default to a placeholder
+    if (!location && !initialData?.lat) {
+      // Could show an error message or use default coordinates
+      console.warn('No location provided for new encounter');
       return;
     }
 
@@ -109,8 +115,8 @@ export function ModernEncounterForm({
       
       const encounter: CatEncounter = {
         id: initialData?.id || uuidv4(),
-        lat: location?.lat ?? initialData?.lat!,
-        lng: location?.lng ?? initialData?.lng!,
+        lat: location?.lat ?? initialData?.lat ?? 0, // Default to 0,0 if no location
+        lng: location?.lng ?? initialData?.lng ?? 0,
         dateTime: initialData?.dateTime || now,
         catColor: formData.catColor,
         coatLength: formData.coatLength,
@@ -129,8 +135,6 @@ export function ModernEncounterForm({
       setIsSubmitting(false);
     }
   };
-
-  const isValid = formData.catColor && formData.coatLength && formData.catType && formData.behavior;
 
   return (
     <Dialog open={isOpen} onOpenChange={onCancel}>
@@ -195,12 +199,12 @@ export function ModernEncounterForm({
                 <div className="space-y-2">
                   <Label htmlFor="catColor">Color *</Label>
                   <Select value={formData.catColor} onValueChange={(value) => setFormData(prev => ({ ...prev, catColor: value }))}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background border-input">
                       <SelectValue placeholder="Select cat color" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border border-border shadow-lg">
                       {CAT_COLORS.map(color => (
-                        <SelectItem key={color} value={color}>
+                        <SelectItem key={color} value={color} className="bg-background hover:bg-accent focus:bg-accent">
                           <span className="capitalize">{color}</span>
                         </SelectItem>
                       ))}
@@ -211,12 +215,12 @@ export function ModernEncounterForm({
                 <div className="space-y-2">
                   <Label htmlFor="coatLength">Coat Length *</Label>
                   <Select value={formData.coatLength} onValueChange={(value) => setFormData(prev => ({ ...prev, coatLength: value }))}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background border-input">
                       <SelectValue placeholder="Select coat length" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border border-border shadow-lg">
                       {COAT_LENGTHS.map(length => (
-                        <SelectItem key={length} value={length}>
+                        <SelectItem key={length} value={length} className="bg-background hover:bg-accent focus:bg-accent">
                           <span className="capitalize">{length}</span>
                         </SelectItem>
                       ))}
@@ -227,12 +231,12 @@ export function ModernEncounterForm({
                 <div className="space-y-2">
                   <Label htmlFor="catType">Type *</Label>
                   <Select value={formData.catType} onValueChange={(value) => setFormData(prev => ({ ...prev, catType: value }))}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background border-input">
                       <SelectValue placeholder="Select cat type" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border border-border shadow-lg">
                       {CAT_TYPES.map(type => (
-                        <SelectItem key={type} value={type}>
+                        <SelectItem key={type} value={type} className="bg-background hover:bg-accent focus:bg-accent">
                           <span className="capitalize">{type}</span>
                         </SelectItem>
                       ))}
@@ -243,12 +247,12 @@ export function ModernEncounterForm({
                 <div className="space-y-2">
                   <Label htmlFor="behavior">Behavior *</Label>
                   <Select value={formData.behavior} onValueChange={(value) => setFormData(prev => ({ ...prev, behavior: value }))}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-background border-input">
                       <SelectValue placeholder="Select behavior" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border border-border shadow-lg">
                       {BEHAVIORS.map(behavior => (
-                        <SelectItem key={behavior} value={behavior}>
+                        <SelectItem key={behavior} value={behavior} className="bg-background hover:bg-accent focus:bg-accent">
                           <span className="capitalize">{behavior}</span>
                         </SelectItem>
                       ))}

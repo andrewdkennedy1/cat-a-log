@@ -79,6 +79,7 @@ export class StorageService implements IStorageService {
     };
 
     await db.put(ENCOUNTERS_STORE, encounterToSave);
+    console.log('StorageService: Saved encounter:', encounterToSave);
   }
 
   /**
@@ -87,6 +88,7 @@ export class StorageService implements IStorageService {
   async getEncounters(): Promise<CatEncounter[]> {
     const db = await this.initDB();
     const encounters = await db.getAll(ENCOUNTERS_STORE);
+    console.log('StorageService: Retrieved encounters:', JSON.stringify(encounters, null, 2));
     
     // Sort by dateTime descending (newest first)
     return encounters.sort((a, b) => 

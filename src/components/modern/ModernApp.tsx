@@ -2,10 +2,10 @@
  * Modern App component using shadcn/ui
  */
 
-import { useState, useEffect } from 'react';
-import { Plus, Menu, Settings, Download, Upload, MapIcon, List, Grid, Search, Filter, Heart, Camera, MapPin, Calendar } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Menu, Settings, Download, Upload, MapIcon, List, Grid, Search, Heart, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ModernEncounterForm } from './ModernEncounterForm';
@@ -64,33 +64,33 @@ export function ModernApp() {
   }, [encounters, searchTerm]);
 
   // Handle location selection for new encounter
-  const handleLocationSelect = (lat: number, lng: number) => {
+  const handleLocationSelect = useCallback((lat: number, lng: number) => {
     setFormLocation({ lat, lng });
     setEditingEncounter(undefined);
     openForm();
-  };
+  }, [openForm]);
 
   // Handle encounter selection
-  const handleEncounterSelect = (encounter: CatEncounter) => {
+  const handleEncounterSelect = useCallback((encounter: CatEncounter) => {
     selectEncounter(encounter.id);
-  };
+  }, [selectEncounter]);
 
   // Handle encounter edit
-  const handleEncounterEdit = (encounter: CatEncounter) => {
+  const handleEncounterEdit = useCallback((encounter: CatEncounter) => {
     setEditingEncounter(encounter);
     setFormLocation(undefined);
     openForm();
-  };
+  }, [openForm]);
 
   // Handle encounter deletion
-  const handleEncounterDelete = async (encounter: CatEncounter) => {
+  const handleEncounterDelete = useCallback(async (encounter: CatEncounter) => {
     if (confirm('Are you sure you want to delete this encounter?')) {
       await deleteEncounter(encounter.id);
       if (selectedEncounter === encounter.id) {
         selectEncounter(undefined);
       }
     }
-  };
+  }, [deleteEncounter, selectedEncounter, selectEncounter]);
 
   // Handle form save
   const handleFormSave = async (encounter: CatEncounter) => {
@@ -299,9 +299,9 @@ export function ModernApp() {
         {viewMode === 'map' ? (
           <>
             {/* Map Container */}
-            <div className="absolute inset-0">
+            <div className="absolute inset-0 z-20">
               <Map
-                encounters={filteredEncounters}
+                encounters={encounters}
                 onLocationSelect={handleLocationSelect}
                 onEncounterSelect={handleEncounterSelect}
                 onEncounterEdit={handleEncounterEdit}
@@ -312,10 +312,12 @@ export function ModernApp() {
             </div>
 
             {/* Floating Location Button */}
-            <ModernLocationButton onLocationFound={handleLocationButtonClick} />
+            <div className="relative z-30">
+              <ModernLocationButton onLocationFound={handleLocationButtonClick} />
+            </div>
 
             {/* Floating Add Button */}
-            <div className="absolute bottom-6 right-6 pointer-events-auto">
+            <div className="absolute bottom-6 right-6 z-10">
               <Button
                 onClick={() => {
                   setFormLocation(undefined);
@@ -353,7 +355,7 @@ export function ModernApp() {
         </div>
       )}
 
-      {/* Encounter Form Dialog */}
+      {/* Dialogs - Outside main container to ensure proper z-index */}
       <ModernEncounterForm
         isOpen={isFormOpen}
         initialData={editingEncounter}
@@ -362,7 +364,6 @@ export function ModernApp() {
         onCancel={handleFormCancel}
       />
 
-      {/* Settings Dialog */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

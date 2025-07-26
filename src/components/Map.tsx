@@ -10,7 +10,6 @@ import { useUI } from '../hooks/useUI';
 import { useGeolocation } from '../hooks/useGeolocation';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 import { EncounterInfoCard } from './EncounterInfoCard';
-import { LocationButton } from './LocationButton';
 import { storageService } from '../services/StorageService';
 
 // Declare global window functions for popup buttons
@@ -41,7 +40,7 @@ const createPawIcon = (color: string, isSelected: boolean = false) => {
   const size = isSelected ? 32 : 24;
   const pawSvg = `
     <svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <g fill="${color}" stroke="#fff" stroke-width="1">
+      <g fill="${color}" stroke="#000" stroke-width="2">
         <!-- Main paw pad -->
         <ellipse cx="12" cy="16" rx="4" ry="3"/>
         <!-- Toe pads -->
@@ -452,19 +451,10 @@ export const Map: FC<ExtendedMapProps> = ({
     };
   }, [photoUrls]);
 
-  // Handle location button click
-  const handleLocationButtonClick = useCallback((lat: number, lng: number) => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([lat, lng], 16);
-    }
-  }, []);
 
   return (
     <div style={{ height: '100%', width: '100%', position: 'relative' }}>
       <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
-      
-      {/* Location Button */}
-      <LocationButton onLocationFound={handleLocationButtonClick} />
       
       {/* GPS Status Indicator for Mobile */}
       {isMobile && (
