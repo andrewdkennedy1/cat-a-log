@@ -2,7 +2,7 @@
  * DeleteConfirmationDialog - Modal component for confirming encounter deletion
  */
 
-import React from 'react';
+
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;

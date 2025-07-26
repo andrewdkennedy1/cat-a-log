@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { FC } from 'react';
 import { Map } from './Map';
 import type { CatEncounter } from '../types';
 
-const ExampleUsage: React.FC = () => {
+const ExampleUsage: FC = () => {
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedEncounter, setSelectedEncounter] = useState<CatEncounter | null>(null);
 
@@ -15,6 +16,7 @@ const ExampleUsage: React.FC = () => {
       lng: -73.9654,
       dateTime: '2024-01-15T10:30:00Z',
       catColor: 'orange',
+      coatLength: 'Shorthair',
       catType: 'domestic',
       behavior: 'friendly',
       comment: 'Very friendly orange tabby cat near Central Park',
@@ -27,6 +29,7 @@ const ExampleUsage: React.FC = () => {
       lng: -73.9656,
       dateTime: '2024-01-16T14:15:00Z',
       catColor: 'black',
+      coatLength: 'Shorthair',
       catType: 'stray',
       behavior: 'shy',
       comment: 'Black cat hiding under a park bench',
@@ -39,6 +42,7 @@ const ExampleUsage: React.FC = () => {
       lng: -73.9650,
       dateTime: '2024-01-17T09:45:00Z',
       catColor: 'white',
+      coatLength: 'Shorthair',
       catType: 'domestic',
       behavior: 'playful',
       comment: 'White cat playing with fallen leaves',
@@ -52,6 +56,7 @@ const ExampleUsage: React.FC = () => {
       lng: -73.9851,
       dateTime: '2024-01-18T16:20:00Z',
       catColor: 'gray',
+      coatLength: 'Shorthair',
       catType: 'stray',
       behavior: 'curious',
       comment: 'Gray cat watching street performers',
@@ -64,6 +69,7 @@ const ExampleUsage: React.FC = () => {
       lng: -73.9853,
       dateTime: '2024-01-19T12:10:00Z',
       catColor: 'calico',
+      coatLength: 'Shorthair',
       catType: 'domestic',
       behavior: 'sleepy',
       comment: 'Calico cat napping in a shop window',
@@ -77,6 +83,7 @@ const ExampleUsage: React.FC = () => {
       lng: -73.9969,
       dateTime: '2024-01-20T08:30:00Z',
       catColor: 'brown',
+      coatLength: 'Shorthair',
       catType: 'stray',
       behavior: 'hungry',
       comment: 'Brown tabby looking for food near the bridge',
@@ -90,6 +97,7 @@ const ExampleUsage: React.FC = () => {
       lng: -73.9934,
       dateTime: '2024-01-21T15:45:00Z',
       catColor: 'tuxedo',
+      coatLength: 'Shorthair',
       catType: 'domestic',
       behavior: 'friendly',
       comment: 'Tuxedo cat with white paws and chest',
