@@ -2,14 +2,16 @@
  * Modern App component using shadcn/ui
  */
 
-import { useState } from 'react';
-import { Plus, Menu, Settings, Download, Upload, MapIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Menu, Settings, Download, Upload, MapIcon, List, Grid, Search, Filter, Heart, Camera, MapPin, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { ModernEncounterForm } from './ModernEncounterForm';
 import { ModernLocationButton } from './ModernLocationButton';
 import { ModernSettings } from './ModernSettings';
+import { ModernEncounterCard } from './ModernEncounterCard';
 import { Map } from '@/components/Map';
 import { useEncounters } from '@/hooks/useEncounters';
 import { useUI } from '@/hooks/useUI';
@@ -42,6 +44,24 @@ export function ModernApp() {
   const [editingEncounter, setEditingEncounter] = useState<CatEncounter | undefined>();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'map' | 'list' | 'grid'>('map');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredEncounters, setFilteredEncounters] = useState<CatEncounter[]>([]);
+
+  // Filter encounters based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredEncounters(encounters);
+    } else {
+      const filtered = encounters.filter(encounter => 
+        encounter.catColor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        encounter.catType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        encounter.behavior.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        encounter.comment?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredEncounters(filtered);
+    }
+  }, [encounters, searchTerm]);
 
   // Handle location selection for new encounter
   const handleLocationSelect = (lat: number, lng: number) => {
@@ -100,52 +120,138 @@ export function ModernApp() {
     // Center map on user location - this would be handled by the Map component
   };
 
+  const renderListView = () => (
+    <div className="h-full overflow-y-auto p-4 space-y-4">
+      {filteredEncounters.length === 0 ? (
+        <Card className="p-8 text-center">
+          <CardContent>
+            <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No encounters found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchTerm ? 'Try adjusting your search terms' : 'Start by adding your first cat encounter!'}
+            </p>
+            <Button onClick={() => openForm()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Encounter
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        filteredEncounters.map((encounter) => (
+          <ModernEncounterCard
+            key={encounter.id}
+            encounter={encounter}
+            onEdit={handleEncounterEdit}
+            onDelete={handleEncounterDelete}
+          />
+        ))
+      )}
+    </div>
+  );
+
+  const renderGridView = () => (
+    <div className="h-full overflow-y-auto p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {filteredEncounters.length === 0 ? (
+          <div className="col-span-full">
+            <Card className="p-8 text-center">
+              <CardContent>
+                <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No encounters found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm ? 'Try adjusting your search terms' : 'Start documenting your cat encounters!'}
+                </p>
+                <Button onClick={() => openForm()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Encounter
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          filteredEncounters.map((encounter) => (
+            <ModernEncounterCard
+              key={encounter.id}
+              encounter={encounter}
+              onEdit={handleEncounterEdit}
+              onDelete={handleEncounterDelete}
+              compact
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Offline Indicator */}
       {isOffline && (
         <div className="bg-yellow-500 text-yellow-900 px-4 py-2 text-center text-sm font-medium">
-          You are currently offline. Some features may be unavailable.
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-yellow-900 rounded-full animate-pulse" />
+            You are currently offline. Some features may be unavailable.
+          </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 relative">
-        {/* Map Container */}
-        <div className="absolute inset-0">
-          <Map
-            encounters={encounters}
-            onLocationSelect={handleLocationSelect}
-            onEncounterSelect={handleEncounterSelect}
-            onEncounterEdit={handleEncounterEdit}
-            onEncounterDelete={handleEncounterDelete}
-            center={mapCenter}
-            zoom={mapZoom}
-          />
-        </div>
+      {/* Header */}
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Heart className="h-6 w-6 text-primary" />
+              <h1 className="font-bold text-xl">CAT-a-log</h1>
+            </div>
+            <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+              {encounters.length} encounters
+            </span>
+          </div>
 
-        {/* Floating UI Elements */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Top Bar */}
-          <div className="flex justify-between items-center p-4 pointer-events-auto">
-            <Card className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-lg">
-              <div className="flex items-center gap-2 p-3">
-                <MapIcon className="h-5 w-5 text-primary" />
-                <h1 className="font-semibold text-lg">CAT-a-log</h1>
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                  {encounters.length} encounters
-                </span>
-              </div>
-            </Card>
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search encounters..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-64"
+              />
+            </div>
 
-            {/* Menu Button */}
+            {/* View Mode Toggle */}
+            <div className="flex border rounded-lg">
+              <Button
+                variant={viewMode === 'map' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('map')}
+                className="rounded-r-none"
+              >
+                <MapIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="rounded-none border-x"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="rounded-l-none"
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Menu */}
             <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <DialogTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border shadow-lg"
-                >
+                <Button variant="outline" size="icon">
                   <Menu className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -168,10 +274,7 @@ export function ModernApp() {
                   <Button
                     variant="ghost"
                     className="w-full justify-start"
-                    onClick={() => {
-                      // Handle export
-                      setIsMenuOpen(false);
-                    }}
+                    onClick={() => setIsMenuOpen(false)}
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Export Data
@@ -179,10 +282,7 @@ export function ModernApp() {
                   <Button
                     variant="ghost"
                     className="w-full justify-start"
-                    onClick={() => {
-                      // Handle import
-                      setIsMenuOpen(false);
-                    }}
+                    onClick={() => setIsMenuOpen(false)}
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Import Data
@@ -191,26 +291,67 @@ export function ModernApp() {
               </DialogContent>
             </Dialog>
           </div>
-
-          {/* Location Button */}
-          <ModernLocationButton onLocationFound={handleLocationButtonClick} />
-
-          {/* Add Encounter Button */}
-          <div className="absolute bottom-6 right-6 pointer-events-auto">
-            <Button
-              onClick={() => {
-                setFormLocation(undefined);
-                setEditingEncounter(undefined);
-                openForm();
-              }}
-              size="lg"
-              className="h-14 w-14 rounded-full shadow-lg"
-            >
-              <Plus className="h-6 w-6" />
-            </Button>
-          </div>
         </div>
       </div>
+
+      {/* Main Content */}
+      <div className="flex-1 relative">
+        {viewMode === 'map' ? (
+          <>
+            {/* Map Container */}
+            <div className="absolute inset-0">
+              <Map
+                encounters={filteredEncounters}
+                onLocationSelect={handleLocationSelect}
+                onEncounterSelect={handleEncounterSelect}
+                onEncounterEdit={handleEncounterEdit}
+                onEncounterDelete={handleEncounterDelete}
+                center={mapCenter}
+                zoom={mapZoom}
+              />
+            </div>
+
+            {/* Floating Location Button */}
+            <ModernLocationButton onLocationFound={handleLocationButtonClick} />
+
+            {/* Floating Add Button */}
+            <div className="absolute bottom-6 right-6 pointer-events-auto">
+              <Button
+                onClick={() => {
+                  setFormLocation(undefined);
+                  setEditingEncounter(undefined);
+                  openForm();
+                }}
+                size="lg"
+                className="h-14 w-14 rounded-full shadow-lg"
+              >
+                <Plus className="h-6 w-6" />
+              </Button>
+            </div>
+          </>
+        ) : viewMode === 'list' ? (
+          renderListView()
+        ) : (
+          renderGridView()
+        )}
+      </div>
+
+      {/* Floating Add Button for List/Grid Views */}
+      {viewMode !== 'map' && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            onClick={() => {
+              setFormLocation(undefined);
+              setEditingEncounter(undefined);
+              openForm();
+            }}
+            size="lg"
+            className="h-14 w-14 rounded-full shadow-lg"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </div>
+      )}
 
       {/* Encounter Form Dialog */}
       <ModernEncounterForm
