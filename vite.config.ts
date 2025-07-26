@@ -43,7 +43,7 @@ export default defineConfig({
         name: 'CAT-a-log',
         short_name: 'CAT-a-log',
         description: 'Personal cat encounter tracking app',
-        theme_color: '#ffffff',
+        theme_color: '#007bff',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
@@ -56,6 +56,12 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }

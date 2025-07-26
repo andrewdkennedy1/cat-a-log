@@ -12,6 +12,13 @@
 	},
 	"observability": {
 		"enabled": true
+	},
+	"dev": {
+		"ip": "127.0.0.1",
+		"port": 8788
+	},
+	"build": {
+		"command": "npm run build"
 	}
 	/**
 	 * Smart Placement

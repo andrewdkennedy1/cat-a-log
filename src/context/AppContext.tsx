@@ -198,6 +198,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 interface AppContextType {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  showSnackbar: (message: string, type?: 'success' | 'error') => void;
 }
 
 // Create context
@@ -206,13 +207,14 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // Provider component
 interface AppProviderProps {
   children: ReactNode;
+  showSnackbar: (message: string, type?: 'success' | 'error') => void;
 }
 
-export function AppProvider({ children }: AppProviderProps) {
+export function AppProvider({ children, showSnackbar }: AppProviderProps) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, showSnackbar }}>
       {children}
     </AppContext.Provider>
   );

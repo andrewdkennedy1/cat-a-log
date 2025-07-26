@@ -2,15 +2,20 @@
  * EncounterManager - Main component that integrates map, form, and encounter management
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, Suspense } from 'react';
 import { Map } from './Map';
 import { EncounterForm } from './EncounterForm';
+import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
+import { DataManagement } from './DataManagement';
+const Settings = React.lazy(() => import('./Settings').then(module => ({ default: module.Settings })));
 import { useEncounters } from '../hooks/useEncounters';
 import { useUI } from '../hooks/useUI';
 import { storageService } from '../services/StorageService';
-import type { CatEncounter } from '../types';
+import type { CatEncounter, UserPreferences } from '../types';
+import { useAppContext } from '../context/AppContext';
 
 export function EncounterManager() {
+  const { state, dispatch, showSnackbar } = useAppContext();
   const { 
     encounters, 
     addEncounter, 
@@ -31,6 +36,11 @@ export function EncounterManager() {
 
   const [formLocation, setFormLocation] = useState<{ lat: number; lng: number } | undefined>();
   const [editingEncounter, setEditingEncounter] = useState<CatEncounter | undefined>();
+  const [deletingEncounter, setDeletingEncounter] = useState<CatEncounter | undefined>();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
 
   // Load encounters from storage on mount
   useEffect(() => {
@@ -40,6 +50,8 @@ export function EncounterManager() {
         setEncounters(storedEncounters);
       } catch (error) {
         console.error('Failed to load encounters:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -65,24 +77,36 @@ export function EncounterManager() {
     openForm();
   }, [openForm]);
 
+  // Initiate encounter deletion
+  const initiateEncounterDelete = useCallback((encounter: CatEncounter) => {
+    setDeletingEncounter(encounter);
+  }, []);
+
   // Handle encounter deletion
-  const handleEncounterDelete = useCallback(async (encounter: CatEncounter) => {
+  const handleEncounterDelete = useCallback(async () => {
+    if (!deletingEncounter) return;
+
+    setIsDeleting(true);
     try {
       // Delete from storage
-      await storageService.deleteEncounter(encounter.id);
+      await storageService.deleteEncounter(deletingEncounter.id);
       
       // Update state
-      deleteEncounter(encounter.id);
+      deleteEncounter(deletingEncounter.id);
       
       // Clear selection if this encounter was selected
-      if (selectedEncounter === encounter.id) {
+      if (selectedEncounter === deletingEncounter.id) {
         selectEncounter(undefined);
       }
+      setDeletingEncounter(undefined);
+      showSnackbar('Encounter deleted successfully.');
     } catch (error) {
       console.error('Failed to delete encounter:', error);
-      throw error; // Re-throw to let the UI handle the error
+      showSnackbar('Failed to delete encounter.', 'error');
+    } finally {
+      setIsDeleting(false);
     }
-  }, [deleteEncounter, selectedEncounter, selectEncounter]);
+  }, [deletingEncounter, deleteEncounter, selectedEncounter, selectEncounter, showSnackbar]);
 
   // Handle form save (create or update)
   const handleFormSave = useCallback(async (encounter: CatEncounter) => {
@@ -93,9 +117,11 @@ export function EncounterManager() {
       if (editingEncounter) {
         // Update existing encounter
         updateEncounter(encounter.id, encounter);
+        showSnackbar('Encounter updated successfully.');
       } else {
         // Add new encounter
         addEncounter(encounter);
+        showSnackbar('Encounter added successfully.');
       }
       
       // Close form and clear state
@@ -104,9 +130,53 @@ export function EncounterManager() {
       setFormLocation(undefined);
     } catch (error) {
       console.error('Failed to save encounter:', error);
-      throw error; // Re-throw to let the form handle the error
+      showSnackbar('Failed to save encounter.', 'error');
     }
-  }, [editingEncounter, updateEncounter, addEncounter, closeForm]);
+  }, [editingEncounter, updateEncounter, addEncounter, closeForm, showSnackbar]);
+
+  const handleExport = useCallback(async () => {
+    try {
+      const data = await storageService.exportData();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cat-a-log-export-${new Date().toISOString()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showSnackbar('Data exported successfully.');
+    } catch (error) {
+      console.error('Failed to export data:', error);
+      showSnackbar('Failed to export data.', 'error');
+    }
+  }, [showSnackbar]);
+
+  const handleImport = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = e.target?.result as string;
+        await storageService.importData(data);
+        const storedEncounters = await storageService.getEncounters();
+        setEncounters(storedEncounters);
+        showSnackbar('Data imported successfully.');
+      } catch (error) {
+        console.error('Failed to import data:', error);
+        showSnackbar('Failed to import data.', 'error');
+      }
+    };
+    reader.readAsText(file);
+  }, [setEncounters, showSnackbar]);
+
+  const handlePreferencesChange = useCallback((updates: Partial<UserPreferences>) => {
+    dispatch({ type: 'UPDATE_USER_PREFERENCES', payload: updates });
+    showSnackbar('Settings saved.');
+  }, [dispatch, showSnackbar]);
 
   // Handle form cancel
   const handleFormCancel = useCallback(() => {
@@ -114,6 +184,10 @@ export function EncounterManager() {
     setEditingEncounter(undefined);
     setFormLocation(undefined);
   }, [closeForm]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="encounter-manager" style={{ height: '100vh', position: 'relative' }}>
@@ -123,7 +197,7 @@ export function EncounterManager() {
         onLocationSelect={handleLocationSelect}
         onEncounterSelect={handleEncounterSelect}
         onEncounterEdit={handleEncounterEdit}
-        onEncounterDelete={handleEncounterDelete}
+        onEncounterDelete={initiateEncounterDelete}
         center={mapCenter}
         zoom={mapZoom}
       />
@@ -136,6 +210,37 @@ export function EncounterManager() {
         onSave={handleFormSave}
         onCancel={handleFormCancel}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={!!deletingEncounter}
+        encounterInfo={deletingEncounter
+          ? { catColor: deletingEncounter.catColor, catType: deletingEncounter.catType, dateTime: deletingEncounter.dateTime }
+          : null
+        }
+        onConfirm={handleEncounterDelete}
+        onCancel={() => setDeletingEncounter(undefined)}
+        isDeleting={isDeleting}
+      />
+
+      <div style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 1000, display: 'flex', gap: '10px' }}>
+        <DataManagement onExport={handleExport} onImport={handleImport} />
+        <button className="btn btn-secondary" onClick={() => setIsSettingsOpen(true)}>Settings</button>
+      </div>
+
+      {isSettingsOpen && (
+        <div className="modal-overlay" onClick={() => setIsSettingsOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <Suspense fallback={<div>Loading...</div>}>
+              <Settings
+                preferences={state.user.preferences}
+                onPreferencesChange={handlePreferencesChange}
+              />
+            </Suspense>
+            <button onClick={() => setIsSettingsOpen(false)} className="btn btn-primary" style={{marginTop: '20px'}}>Close</button>
+          </div>
+        </div>
+      )}
 
       {/* Add Cat Button */}
       <button
