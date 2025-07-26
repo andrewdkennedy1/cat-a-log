@@ -10,7 +10,7 @@ import type { CatEncounter, UserPreferences } from '../../types';
 
 // Test wrapper component
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <AppProvider>{children}</AppProvider>
+  <AppProvider showSnackbar={vi.fn()}>{children}</AppProvider>
 );
 
 // Mock encounter data
@@ -24,6 +24,7 @@ const mockEncounter: CatEncounter = {
   behavior: 'Friendly',
   comment: 'Very friendly cat',
   photoBlobId: 'photo-1',
+  coatLength: 'short', // Added missing property
   createdAt: '2024-01-15T10:30:00.000Z',
   updatedAt: '2024-01-15T10:30:00.000Z'
 };
@@ -36,6 +37,7 @@ const mockEncounter2: CatEncounter = {
   catColor: 'Orange/Ginger',
   catType: 'Stray',
   behavior: 'Shy',
+  coatLength: 'medium', // Added missing property
   createdAt: '2024-01-16T14:20:00.000Z',
   updatedAt: '2024-01-16T14:20:00.000Z'
 };
@@ -237,7 +239,11 @@ describe('AppContext', () => {
         defaultMapZoom: 12,
         autoSync: false,
         photoQuality: 'high',
-        theme: 'dark'
+        theme: 'dark',
+        customCatColors: [], // Added missing property
+        customCoatLengths: [], // Added missing property
+        customCatTypes: [], // Added missing property
+        customBehaviors: [], // Added missing property
       };
       
       act(() => {

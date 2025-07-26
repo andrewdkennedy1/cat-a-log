@@ -57,6 +57,7 @@ const mockEncounters: CatEncounter[] = [
     catType: 'domestic',
     behavior: 'friendly',
     comment: 'Very friendly cat',
+    coatLength: 'short', // Added missing property
     createdAt: '2024-01-15T10:30:00Z',
     updatedAt: '2024-01-15T10:30:00Z'
   },
@@ -68,6 +69,7 @@ const mockEncounters: CatEncounter[] = [
     catColor: 'black',
     catType: 'stray',
     behavior: 'shy',
+    coatLength: 'medium', // Added missing property
     createdAt: '2024-01-16T14:15:00Z',
     updatedAt: '2024-01-16T14:15:00Z'
   }

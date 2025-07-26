@@ -259,7 +259,7 @@ export const Map: React.FC<ExtendedMapProps> = ({
     // The map should only be initialized once.
     // `center` and `zoom` are only used for the initial view.
     // `onLocationSelect` and `handleMapMoveEnd` should be stable callbacks.
-  }, [onLocationSelect, handleMapMoveEnd]);
+  }, [center, zoom, onLocationSelect, handleMapMoveEnd]);
 
   // Update map center and zoom when props change
   useEffect(() => {
