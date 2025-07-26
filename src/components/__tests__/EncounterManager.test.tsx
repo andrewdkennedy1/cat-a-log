@@ -161,10 +161,11 @@ describe('EncounterManager Integration', () => {
     renderWithProviders(<EncounterManager />);
 
     await waitFor(() => {
-      expect(screen.getByText('Settings')).toBeInTheDocument();
+      expect(screen.getByTitle('Menu')).toBeInTheDocument();
     });
 
-    // Click the settings button
+    // Open menu and click the settings button
+    fireEvent.click(screen.getByTitle('Menu'));
     fireEvent.click(screen.getByText('Settings'));
 
     // Settings modal should appear
@@ -185,6 +186,12 @@ describe('EncounterManager Integration', () => {
     renderWithProviders(<EncounterManager />);
 
     await waitFor(() => {
+      expect(screen.getByTitle('Menu')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle('Menu'));
+
+    await waitFor(() => {
       expect(screen.getByText('Export Data')).toBeInTheDocument();
     });
 
@@ -199,6 +206,12 @@ describe('EncounterManager Integration', () => {
 
   it('handles data import', async () => {
     renderWithProviders(<EncounterManager />);
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Menu')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle('Menu'));
 
     await waitFor(() => {
       expect(screen.getByTestId('import-input')).toBeInTheDocument();

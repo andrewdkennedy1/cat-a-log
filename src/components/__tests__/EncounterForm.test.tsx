@@ -325,6 +325,8 @@ describe('EncounterForm', () => {
             });
         });
 
+    });
+
     describe('form interactions', () => {
         it('calls onCancel when cancel button is clicked', async () => {
             const user = userEvent.setup();

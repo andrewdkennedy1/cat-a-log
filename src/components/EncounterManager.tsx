@@ -39,6 +39,7 @@ export function EncounterManager() {
   const [deletingEncounter, setDeletingEncounter] = useState<CatEncounter | undefined>();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
 
@@ -223,9 +224,42 @@ export function EncounterManager() {
         isDeleting={isDeleting}
       />
 
-      <div style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 1000, display: 'flex', gap: '10px' }}>
-        <DataManagement onExport={handleExport} onImport={handleImport} />
-        <button className="btn btn-secondary" onClick={() => setIsSettingsOpen(true)}>Settings</button>
+      {/* Floating menu for export/import and settings */}
+      <div style={{ position: 'absolute', bottom: '20px', left: '20px', zIndex: 1000 }}>
+        <button
+          className="btn btn-secondary menu-button"
+          onClick={() => setIsMenuOpen(prev => !prev)}
+          title="Menu"
+          style={{ width: '40px', height: '40px', padding: 0 }}
+        >
+          ☰
+        </button>
+        {isMenuOpen && (
+          <div
+            className="menu-popup"
+            style={{
+              position: 'absolute',
+              bottom: '50px',
+              left: 0,
+              background: 'white',
+              padding: '10px',
+              borderRadius: '4px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            }}
+          >
+            <DataManagement onExport={handleExport} onImport={handleImport} />
+            <button
+              className="btn btn-secondary"
+              style={{ marginTop: '10px' }}
+              onClick={() => {
+                setIsSettingsOpen(true);
+                setIsMenuOpen(false);
+              }}
+            >
+              Settings
+            </button>
+          </div>
+        )}
       </div>
 
       {isSettingsOpen && (
