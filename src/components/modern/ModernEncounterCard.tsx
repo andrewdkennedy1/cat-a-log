@@ -16,20 +16,22 @@ interface ModernEncounterCardProps {
   onDelete?: (encounter: CatEncounter) => void;
   className?: string;
   compact?: boolean;
+  photoUrl?: string | null;
 }
 
-export function ModernEncounterCard({ 
-  encounter, 
-  onEdit, 
-  onDelete, 
+export function ModernEncounterCard({
+  encounter,
+  onEdit,
+  onDelete,
   className,
-  compact = false
+  compact = false,
+  photoUrl: initialPhotoUrl = null
 }: ModernEncounterCardProps) {
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(initialPhotoUrl);
 
   useEffect(() => {
     const loadPhoto = async () => {
-      if (encounter.photoBlobId) {
+      if (encounter.photoBlobId && !initialPhotoUrl) {
         try {
           const blob = await storageService.getPhoto(encounter.photoBlobId);
           if (blob) {
@@ -39,6 +41,8 @@ export function ModernEncounterCard({
         } catch (error) {
           console.error('Failed to load photo:', error);
         }
+      } else if (initialPhotoUrl) {
+        setPhotoUrl(initialPhotoUrl);
       }
     };
 
@@ -46,11 +50,11 @@ export function ModernEncounterCard({
 
     // Cleanup URL when component unmounts
     return () => {
-      if (photoUrl) {
+      if (photoUrl && !initialPhotoUrl) {
         URL.revokeObjectURL(photoUrl);
       }
     };
-  }, [encounter.photoBlobId]);
+  }, [encounter.photoBlobId, initialPhotoUrl, photoUrl]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

@@ -11,6 +11,7 @@ import { useGeolocation } from '../hooks/useGeolocation';
 import { DeleteConfirmationDialog } from './DeleteConfirmationDialog';
 import { EncounterInfoCard } from './EncounterInfoCard';
 import { storageService } from '../services/StorageService';
+import { LocationButton } from './LocationButton';
 
 // Declare global window functions for popup buttons
 declare global {
@@ -102,6 +103,16 @@ export const Map: FC<ExtendedMapProps> = ({
   const markersRef = useRef<L.LayerGroup<L.Marker> | null>(null);
   const userLocationMarkerRef = useRef<L.Marker | null>(null);
   const { selectedEncounter } = useUI();
+  const onLocationSelectRef = useRef(onLocationSelect);
+
+  useEffect(() => {
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
+  const onEncounterSelectRef = useRef(onEncounterSelect);
+
+  useEffect(() => {
+    onEncounterSelectRef.current = onEncounterSelect;
+  }, [onEncounterSelect]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [encounterToDelete, setEncounterToDelete] = useState<CatEncounter | null>(null);
@@ -189,8 +200,15 @@ export const Map: FC<ExtendedMapProps> = ({
     setEncounterToDelete(null);
   }, []);
 
+  // Handle location button click to center map on user location
+  const handleLocationFound = useCallback((lat: number, lng: number) => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([lat, lng], 16);
+    }
+  }, []);
+
   // Create popup content with EncounterInfoCard
-  const createPopupContent = useCallback((encounter: CatEncounter) => {
+  const createPopupContent = useCallback((encounter: CatEncounter, photoUrl?: string) => {
     const container = document.createElement('div');
     container.style.minWidth = '250px';
     container.style.padding = '8px';
@@ -200,14 +218,15 @@ export const Map: FC<ExtendedMapProps> = ({
     root.render(
       <EncounterInfoCard
         encounter={encounter}
-        onEdit={(enc) => onEncounterEdit?.(enc)}
-        onDelete={(enc) => onEncounterDelete?.(enc)}
+        onEdit={(enc) => window.editEncounter(enc.id)}
+        onDelete={(enc) => window.deleteEncounter(enc.id)}
         className="map-popup-card"
+        photoUrl={photoUrl}
       />
     );
 
     return container;
-  }, [onEncounterEdit, onEncounterDelete]);
+  }, []);
 
 
   // Initialize map
@@ -244,7 +263,7 @@ export const Map: FC<ExtendedMapProps> = ({
       longPressTriggered = false;
       longPressTimer = setTimeout(() => {
         longPressTriggered = true;
-        onLocationSelect(e.latlng.lat, e.latlng.lng);
+        onLocationSelectRef.current(e.latlng.lat, e.latlng.lng);
       }, 500); // 500ms for long press
     };
 
@@ -254,7 +273,7 @@ export const Map: FC<ExtendedMapProps> = ({
         longPressTriggered = false;
         longPressTimer = setTimeout(() => {
           longPressTriggered = true;
-          onLocationSelect(touchEvent.latlng.lat, touchEvent.latlng.lng);
+          onLocationSelectRef.current(touchEvent.latlng.lat, touchEvent.latlng.lng);
         }, 500);
       }
     };
@@ -275,7 +294,7 @@ export const Map: FC<ExtendedMapProps> = ({
         // Additional check to ensure we're not clicking on a marker
         const isMarkerClick = target.closest('.leaflet-marker-icon') || target.closest('.paw-marker');
         if (!isMarkerClick) {
-          onLocationSelect(e.latlng.lat, e.latlng.lng);
+          onLocationSelectRef.current(e.latlng.lat, e.latlng.lng);
         }
       }
     };
@@ -296,7 +315,7 @@ export const Map: FC<ExtendedMapProps> = ({
     // The map should only be initialized once.
     // `center` and `zoom` are only used for the initial view.
     // `onLocationSelect` should be stable callback.
-  }, [center, zoom, onLocationSelect]);
+  }, [center, zoom]);
 
 
   // Load photo thumbnails for encounters with photos
@@ -349,7 +368,7 @@ export const Map: FC<ExtendedMapProps> = ({
       mapInstanceRef.current.setView([lat, lng], 16);
       setHasInitializedLocation(true);
     }
-  }, [position, getCoordinates, getAccuracy, isMobile, hasInitializedLocation]);
+  }, [position, getCoordinates, getAccuracy, isMobile, hasInitializedLocation, usingIpGeolocation]);
 
   // Request location permission on mobile devices
   useEffect(() => {
@@ -358,65 +377,91 @@ export const Map: FC<ExtendedMapProps> = ({
     }
   }, [isMobile, geoSupported, position, geoError, getCurrentPosition]);
 
-  // Update markers when encounters change - use a ref to track if we need to update
-  const lastEncountersRef = useRef<string>('');
-  const lastSelectedRef = useRef<string | undefined>('');
+  // Update markers when encounters change - use a ref to track existing markers
+  const markersMapRef = useRef<globalThis.Map<string, L.Marker>>(new globalThis.Map());
 
   useEffect(() => {
-    if (!markersRef.current || !mapInstanceRef.current) return;
-
-    // Create a stable key for encounters to avoid unnecessary updates
-    const encountersKey = encounters.map(e => `${e.id}-${e.lat}-${e.lng}-${e.catColor}`).join('|');
-    const selectedKey = selectedEncounter;
-
-    // Only update if encounters or selection actually changed
-    if (lastEncountersRef.current === encountersKey && lastSelectedRef.current === selectedKey) {
+    if (!markersRef.current || !mapInstanceRef.current) {
+      console.log('Map: Missing refs - markersRef:', !!markersRef.current, 'mapInstanceRef:', !!mapInstanceRef.current);
       return;
     }
 
-    lastEncountersRef.current = encountersKey;
-    lastSelectedRef.current = selectedKey;
+    console.log('Map: Updating markers, encounters:', encounters.length, encounters);
 
-    // Clear existing markers
-    markersRef.current.clearLayers();
+    const currentMarkers = markersMapRef.current;
+    const newEncounterIds = new Set(encounters.map(e => e.id));
 
-    // Add markers for each encounter
+    // Remove markers for encounters that no longer exist
+    for (const [id, marker] of currentMarkers.entries()) {
+      if (!newEncounterIds.has(id)) {
+        markersRef.current.removeLayer(marker);
+        currentMarkers.delete(id);
+      }
+    }
+
+    // Add or update markers for each encounter
     encounters.forEach((encounter) => {
+      console.log('Map: Processing encounter:', encounter.id, encounter.lat, encounter.lng, encounter.catColor);
       const color = COLOR_MAP[encounter.catColor.toLowerCase()] || COLOR_MAP.other;
       const isSelected = selectedEncounter === encounter.id;
-      const icon = createPawIcon(color, isSelected);
+      const existingMarker = currentMarkers.get(encounter.id);
 
-      const marker = L.marker([encounter.lat, encounter.lng], {
-        icon,
-        // Ensure markers stay visible during scrolling and interactions
-        riseOnHover: true,
-        keyboard: false,
-        interactive: true,
-        bubblingMouseEvents: false
-      });
+      console.log('Map: Color for', encounter.catColor, ':', color);
 
-      // Create popup content with photo thumbnail
-      const popupContent = createPopupContent(encounter);
-      marker.bindPopup(popupContent);
+      // Check if we need to update this marker
+      const needsUpdate = !existingMarker ||
+        existingMarker.getLatLng().lat !== encounter.lat ||
+        existingMarker.getLatLng().lng !== encounter.lng ||
+        (isSelected !== (existingMarker.options.icon as L.DivIcon)?.options?.className?.includes('selected'));
 
-      // Add click handler
-      marker.on('click', (e: L.LeafletMouseEvent) => {
-        // Prevent the map click event from firing
-        L.DomEvent.stopPropagation(e);
-        if (e.originalEvent) {
-          e.originalEvent.stopPropagation();
-          e.originalEvent.preventDefault();
+      console.log('Map: Needs update:', needsUpdate, 'existing marker:', !!existingMarker);
+
+      if (needsUpdate) {
+        // Remove existing marker if it exists
+        if (existingMarker && markersRef.current) {
+          markersRef.current.removeLayer(existingMarker);
         }
-        // Use a stable reference to prevent recreating markers
-        if (onEncounterSelect) {
-          onEncounterSelect(encounter);
-        }
-        marker.openPopup();
-      });
 
-      markersRef.current!.addLayer(marker);
+        // Create new marker
+        const icon = createPawIcon(color, isSelected);
+        const marker = L.marker([encounter.lat, encounter.lng], {
+          icon,
+          // Ensure markers stay visible during scrolling and interactions
+          riseOnHover: true,
+          keyboard: false,
+          interactive: true,
+          bubblingMouseEvents: false,
+          zIndexOffset: isSelected ? 1000 : 0 // Bring selected markers to front
+        });
+
+        // Create popup content with photo thumbnail
+        const photoUrl = encounter.photoBlobId ? photoUrls[encounter.photoBlobId] : undefined;
+        const popupContent = createPopupContent(encounter, photoUrl);
+        marker.bindPopup(popupContent);
+
+        // Add click handler
+        marker.on('click', (e: L.LeafletMouseEvent) => {
+          // Prevent the map click event from firing
+          L.DomEvent.stopPropagation(e);
+          if (e.originalEvent) {
+            e.originalEvent.stopPropagation();
+            e.originalEvent.preventDefault();
+          }
+          // Use a stable reference to prevent recreating markers
+          onEncounterSelectRef.current(encounter);
+          marker.openPopup();
+        });
+
+        if (markersRef.current) {
+          markersRef.current.addLayer(marker);
+        }
+        currentMarkers.set(encounter.id, marker);
+        console.log('Map: Added marker for encounter:', encounter.id, 'at', encounter.lat, encounter.lng);
+      } else {
+        console.log('Map: Skipped marker update for encounter:', encounter.id);
+      }
     });
-  }, [encounters, selectedEncounter, createPopupContent, onEncounterSelect]);
+  }, [encounters, selectedEncounter, createPopupContent, photoUrls]);
 
   // Global functions for popup buttons
   useEffect(() => {
@@ -476,6 +521,12 @@ export const Map: FC<ExtendedMapProps> = ({
           {usingIpGeolocation && '📍 Using approximate location'}
         </div>
       )}
+      
+      {/* Location Button */}
+      <LocationButton 
+        onLocationFound={handleLocationFound}
+        className="map-location-button"
+      />
       
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog

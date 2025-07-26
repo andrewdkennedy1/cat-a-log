@@ -2,6 +2,7 @@ import type { ChangeEvent } from 'react';
 import type { UserPreferences } from '../types';
 import { GoogleLogin } from './GoogleLogin';
 import { syncService } from '../services/SyncService';
+import { storageService } from '../services/StorageService';
 import { useUser } from '../hooks/useUser';
 
 interface SettingsProps {
@@ -42,6 +43,22 @@ export function Settings({ preferences, onPreferencesChange, showSnackbar }: Set
     } catch (error) {
       console.error('Restore failed:', error);
       showSnackbar('Restore failed. Please try again.', 'error');
+    }
+  };
+
+  const handleClearData = async () => {
+    if (!confirm('This will permanently delete ALL your cat encounter data, photos, and settings. This action cannot be undone. Are you sure?')) {
+      return;
+    }
+
+    try {
+      await storageService.clearStorage();
+      showSnackbar('All data cleared successfully!', 'success');
+      // Refresh the page to reset the app state
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (error) {
+      console.error('Clear data failed:', error);
+      showSnackbar('Failed to clear data. Please try again.', 'error');
     }
   };
 
@@ -107,6 +124,18 @@ export function Settings({ preferences, onPreferencesChange, showSnackbar }: Set
             </div>
           </>
         )}
+      </div>
+
+      <div className="settings-section">
+        <h4>Data Management</h4>
+        <div className="settings-item">
+          <div className="clear-data-warning">
+            <p><strong>⚠️ Warning:</strong> This will permanently delete all your cat encounters, photos, and settings.</p>
+            <button onClick={handleClearData} className="btn btn-danger">
+              🗑️ Clear All Data
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

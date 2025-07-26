@@ -1,12 +1,8 @@
 export default {
-  fetch(request) {
-    const url = new URL(request.url);
-
-    if (url.pathname.startsWith("/api/")) {
-      return Response.json({
-        name: "Cloudflare",
-      });
-    }
-		return new Response(null, { status: 404 });
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // By returning the result of ASSETS.fetch, we delegate asset serving to Pages.
+    // This is the recommended approach for SPAs, as it respects the configuration
+    // in wrangler.jsonc, including "not_found_handling": "single-page-application".
+    return env.ASSETS.fetch(request);
   },
-} satisfies ExportedHandler<Env>;
+};

@@ -3,9 +3,10 @@
  */
 
 import { createContext, useContext, useReducer, useEffect } from 'react';
-import type { ReactNode, Dispatch } from 'react';
+import type { ReactNode } from 'react';
 import type { CatEncounter, UserPreferences, AppState } from '../types';
 import { storageService } from '../services/StorageService';
+import { GoogleDriveService } from '@/services/GoogleDriveService';
 
 // Action types for the reducer
 export type AppAction =
@@ -24,7 +25,8 @@ export type AppAction =
   | { type: 'SET_AUTHENTICATED'; payload: boolean }
   | { type: 'SET_GOOGLE_TOKEN'; payload: string | undefined }
   | { type: 'SET_USER_PREFERENCES'; payload: UserPreferences }
-  | { type: 'UPDATE_USER_PREFERENCES'; payload: Partial<UserPreferences> };
+  | { type: 'UPDATE_USER_PREFERENCES'; payload: Partial<UserPreferences> }
+  | { type: 'SET_GOOGLE_DRIVE_SERVICE'; payload: GoogleDriveService | undefined };
 
 // Default user preferences
 const defaultPreferences: UserPreferences = {
@@ -45,7 +47,9 @@ const initialState: AppState = {
   user: {
     isAuthenticated: false,
     googleToken: undefined,
-    preferences: defaultPreferences
+    preferences: defaultPreferences,
+    googleDriveService: undefined,
+    googleDriveStatus: 'uninitialized'
   },
   ui: {
     selectedEncounter: undefined,
@@ -162,6 +166,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
           googleToken: action.payload
         }
       };
+      
+    case 'SET_GOOGLE_DRIVE_SERVICE':
+      return {
+        ...state,
+        user: {
+          ...state.user,
+          googleDriveService: action.payload,
+          googleDriveStatus: action.payload ? 'initialized' : 'uninitialized'
+        }
+      };
 
     case 'SET_USER_PREFERENCES':
       return {
@@ -204,7 +218,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 // Context type
 interface AppContextType {
   state: AppState;
-  dispatch: Dispatch<AppAction>;
+  dispatch: (action: AppAction) => void;
   showSnackbar: (message: string, type?: 'success' | 'error') => void;
 }
 
@@ -220,10 +234,13 @@ interface AppProviderProps {
 export function AppProvider({ children, showSnackbar }: AppProviderProps) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // Load encounters from storage on app initialization
   useEffect(() => {
     const loadEncounters = async () => {
       try {
+        console.log('AppContext: Loading encounters from storage...');
         const encounters = await storageService.getEncounters();
+        console.log('AppContext: Loaded encounters:', encounters.length, encounters);
         dispatch({ type: 'SET_ENCOUNTERS', payload: encounters });
       } catch (error) {
         console.error('Failed to load encounters from storage:', error);
@@ -231,10 +248,37 @@ export function AppProvider({ children, showSnackbar }: AppProviderProps) {
       }
     };
     loadEncounters();
-  }, [dispatch, showSnackbar]);
+  }, []); // Only run once on mount
+
+  // Enhanced dispatch that also saves to storage
+  const enhancedDispatch = (action: AppAction) => {
+    // First update the state
+    dispatch(action);
+
+    // Then save to storage for persistence (async, but don't block UI)
+    (async () => {
+      try {
+        switch (action.type) {
+          case 'ADD_ENCOUNTER':
+            await storageService.saveEncounter(action.payload);
+            break;
+          case 'UPDATE_ENCOUNTER':
+            await storageService.updateEncounter(action.payload.id, action.payload.updates);
+            break;
+          case 'DELETE_ENCOUNTER':
+            await storageService.deleteEncounter(action.payload);
+            break;
+          // No storage action needed for other types
+        }
+      } catch (error) {
+        console.error('Failed to save to storage:', error);
+        showSnackbar('Failed to save data.', 'error');
+      }
+    })();
+  };
 
   return (
-    <AppContext.Provider value={{ state, dispatch, showSnackbar }}>
+    <AppContext.Provider value={{ state, dispatch: enhancedDispatch, showSnackbar }}>
       {children}
     </AppContext.Provider>
   );

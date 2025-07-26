@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { Palette, Cloud, Download, Upload, Smartphone, Monitor, Sun, Moon } from 'lucide-react';
+import { Palette, Cloud, Download, Upload, Smartphone, Monitor, Sun, Moon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ModernGoogleLogin } from './ModernGoogleLogin';
 import { useUser } from '@/hooks/useUser';
 import { syncService } from '@/services/SyncService';
+import { storageService } from '@/services/StorageService';
 import type { UserPreferences } from '@/types';
 
 interface ModernSettingsProps {
@@ -59,6 +60,24 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
       // Show success message
     } catch (error) {
       console.error('Restore failed:', error);
+      // Show error message
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearData = async () => {
+    if (!confirm('This will permanently delete ALL your cat encounter data, photos, and settings. This action cannot be undone. Are you sure?')) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await storageService.clearStorage();
+      // Refresh the page to reset the app state
+      window.location.reload();
+    } catch (error) {
+      console.error('Clear data failed:', error);
       // Show error message
     } finally {
       setIsLoading(false);
@@ -221,6 +240,41 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
                 <SelectItem value="17">Building Level (17)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5" />
+            Data Management
+          </CardTitle>
+          <CardDescription>
+            Manage your stored data and reset the app
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
+              <div className="space-y-2">
+                <h4 className="font-medium text-destructive">Clear All Data</h4>
+                <p className="text-sm text-muted-foreground">
+                  This will permanently delete all your cat encounters, photos, and settings. 
+                  This action cannot be undone.
+                </p>
+                <Button
+                  onClick={handleClearData}
+                  disabled={isLoading}
+                  variant="destructive"
+                  size="sm"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isLoading ? "Clearing..." : "Clear All Data"}
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

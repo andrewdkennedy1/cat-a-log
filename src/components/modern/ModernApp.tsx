@@ -3,34 +3,35 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Menu, Settings, Download, Upload, MapIcon, List, Grid, Search, Heart, Camera } from 'lucide-react';
+import { Plus, Search, Heart, Camera, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ModernEncounterForm } from './ModernEncounterForm';
-import { ModernLocationButton } from './ModernLocationButton';
 import { ModernSettings } from './ModernSettings';
 import { ModernEncounterCard } from './ModernEncounterCard';
+import { ModernBottomNav } from './ModernBottomNav';
 import { Map } from '@/components/Map';
 import { useEncounters } from '@/hooks/useEncounters';
 import { useUI } from '@/hooks/useUI';
 import { useUser } from '@/hooks/useUser';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
 import type { CatEncounter } from '@/types';
+import { storageService } from '@/services/StorageService';
 
 export function ModernApp() {
   const { isOffline } = useOfflineStatus();
-  const { 
-    encounters, 
-    addEncounter, 
-    updateEncounter, 
-    deleteEncounter 
+  const {
+    encounters,
+    addEncounter,
+    updateEncounter,
+    deleteEncounter
   } = useEncounters();
   
-  const { 
-    mapCenter, 
-    mapZoom, 
+  const {
+    mapCenter,
+    mapZoom,
     isFormOpen,
     openForm,
     closeForm,
@@ -43,17 +44,46 @@ export function ModernApp() {
   const [formLocation, setFormLocation] = useState<{ lat: number; lng: number } | undefined>();
   const [editingEncounter, setEditingEncounter] = useState<CatEncounter | undefined>();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'grid'>('map');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredEncounters, setFilteredEncounters] = useState<CatEncounter[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+
+  // Load photo thumbnails
+  useEffect(() => {
+    const loadPhotos = async () => {
+      const urls: Record<string, string> = {};
+      for (const encounter of encounters) {
+        if (encounter.photoBlobId && !photoUrls[encounter.photoBlobId]) {
+          try {
+            const blob = await storageService.getPhoto(encounter.photoBlobId);
+            if (blob) {
+              urls[encounter.photoBlobId] = URL.createObjectURL(blob);
+            }
+          } catch (error) {
+            console.error('Failed to load photo:', error);
+          }
+        }
+      }
+      if (Object.keys(urls).length > 0) {
+        setPhotoUrls(prev => ({ ...prev, ...urls }));
+      }
+    };
+
+    loadPhotos();
+
+    // Cleanup URLs on unmount
+    return () => {
+      Object.values(photoUrls).forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [encounters, photoUrls]);
 
   // Filter encounters based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredEncounters(encounters);
     } else {
-      const filtered = encounters.filter(encounter => 
+      const filtered = encounters.filter(encounter =>
         encounter.catColor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         encounter.catType.toLowerCase().includes(searchTerm.toLowerCase()) ||
         encounter.behavior.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -115,13 +145,9 @@ export function ModernApp() {
     setFormLocation(undefined);
   };
 
-  // Handle location button click
-  const handleLocationButtonClick = () => {
-    // Center map on user location - this would be handled by the Map component
-  };
 
   const renderListView = () => (
-    <div className="h-full overflow-y-auto p-4 space-y-4">
+    <div className="h-full overflow-y-auto p-4 space-y-4 pb-24">
       {filteredEncounters.length === 0 ? (
         <Card className="p-8 text-center">
           <CardContent>
@@ -143,6 +169,7 @@ export function ModernApp() {
             encounter={encounter}
             onEdit={handleEncounterEdit}
             onDelete={handleEncounterDelete}
+            photoUrl={encounter.photoBlobId ? photoUrls[encounter.photoBlobId] : null}
           />
         ))
       )}
@@ -150,8 +177,8 @@ export function ModernApp() {
   );
 
   const renderGridView = () => (
-    <div className="h-full overflow-y-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="h-full overflow-y-auto p-4 pb-24">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {filteredEncounters.length === 0 ? (
           <div className="col-span-full">
             <Card className="p-8 text-center">
@@ -176,6 +203,7 @@ export function ModernApp() {
               onEdit={handleEncounterEdit}
               onDelete={handleEncounterDelete}
               compact
+              photoUrl={encounter.photoBlobId ? photoUrls[encounter.photoBlobId] : null}
             />
           ))
         )}
@@ -184,10 +212,10 @@ export function ModernApp() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-[100dvh] w-screen overflow-hidden bg-background relative">
       {/* Offline Indicator */}
       {isOffline && (
-        <div className="bg-yellow-500 text-yellow-900 px-4 py-2 text-center text-sm font-medium">
+        <div className="bg-yellow-500 text-yellow-900 px-4 py-2 text-center text-sm font-medium absolute top-0 left-0 right-0 z-50">
           <div className="flex items-center justify-center gap-2">
             <div className="w-2 h-2 bg-yellow-900 rounded-full animate-pulse" />
             You are currently offline. Some features may be unavailable.
@@ -196,164 +224,75 @@ export function ModernApp() {
       )}
 
       {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between p-4">
+      <header className="absolute top-0 left-0 right-0 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-40">
+        <div className="flex items-center justify-between p-4 h-20" style={{ paddingTop: `calc(env(safe-area-inset-top) + 1rem)` }}>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Heart className="h-6 w-6 text-primary" />
               <h1 className="font-bold text-xl">CAT-a-log</h1>
             </div>
-            <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full">
+            <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full hidden sm:inline-block">
               {encounters.length} encounters
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Search */}
-            <div className="relative">
+            <div className="relative hidden sm:block">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search encounters..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="pl-10 w-48"
               />
             </div>
-
-            {/* View Mode Toggle */}
-            <div className="flex border rounded-lg">
-              <Button
-                variant={viewMode === 'map' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('map')}
-                className="rounded-r-none"
-              >
-                <MapIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="rounded-none border-x"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="rounded-l-none"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Menu */}
-            <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Menu</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-2">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      setIsSettingsOpen(true);
-                      setIsMenuOpen(false);
-                    }}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Data
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import Data
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            
+            {/* Settings Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSettingsOpen(true)}
+              className="rounded-full"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="flex-1 relative">
-        {viewMode === 'map' ? (
-          <>
-            {/* Map Container */}
-            <div className="absolute inset-0 z-20">
-              <Map
-                encounters={encounters}
-                onLocationSelect={handleLocationSelect}
-                onEncounterSelect={handleEncounterSelect}
-                onEncounterEdit={handleEncounterEdit}
-                onEncounterDelete={handleEncounterDelete}
-                center={mapCenter}
-                zoom={mapZoom}
-              />
-            </div>
-
-            {/* Floating Location Button */}
-            <div className="relative z-30">
-              <ModernLocationButton onLocationFound={handleLocationButtonClick} />
-            </div>
-
-            {/* Floating Add Button */}
-            <div className="absolute bottom-6 right-6 z-10">
-              <Button
-                onClick={() => {
-                  setFormLocation(undefined);
-                  setEditingEncounter(undefined);
-                  openForm();
-                }}
-                size="lg"
-                className="h-14 w-14 rounded-full shadow-lg"
-              >
-                <Plus className="h-6 w-6" />
-              </Button>
-            </div>
-          </>
-        ) : viewMode === 'list' ? (
-          renderListView()
-        ) : (
-          renderGridView()
-        )}
-      </div>
-
-      {/* Floating Add Button for List/Grid Views */}
-      {viewMode !== 'map' && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <Button
-            onClick={() => {
-              setFormLocation(undefined);
-              setEditingEncounter(undefined);
-              openForm();
-            }}
-            size="lg"
-            className="h-14 w-14 rounded-full shadow-lg"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
+      <main className="h-full w-full">
+        {/* Map is always in the background */}
+        <div className="absolute inset-0 z-10">
+          <Map
+            encounters={encounters}
+            onLocationSelect={handleLocationSelect}
+            onEncounterSelect={handleEncounterSelect}
+            onEncounterEdit={handleEncounterEdit}
+            onEncounterDelete={handleEncounterDelete}
+            center={mapCenter}
+            zoom={mapZoom}
+          />
         </div>
-      )}
+        
+        {/* List and Grid views overlay the map */}
+        {viewMode !== 'map' && (
+          <div className="absolute inset-0 z-20 bg-background pt-20">
+            {viewMode === 'list' ? renderListView() : renderGridView()}
+          </div>
+        )}
+      </main>
+
+      <ModernBottomNav
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onAdd={() => {
+          setFormLocation(undefined);
+          setEditingEncounter(undefined);
+          openForm();
+        }}
+      />
 
       {/* Dialogs - Outside main container to ensure proper z-index */}
       <ModernEncounterForm

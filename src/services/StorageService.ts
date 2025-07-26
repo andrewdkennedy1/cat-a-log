@@ -209,7 +209,7 @@ export class StorageService implements IStorageService {
     
     try {
       backup = JSON.parse(jsonData);
-    } catch (error) {
+    } catch {
       throw new Error('Invalid JSON format');
     }
     
@@ -344,6 +344,64 @@ export class StorageService implements IStorageService {
   async saveSyncMetadata(metadata: SyncMetadata): Promise<void> {
     const db = await this.initDB();
     await db.put(METADATA_STORE, metadata, SYNC_METADATA_KEY);
+  }
+
+  /**
+   * Get custom options for a specific field
+   */
+  async getCustomOptions(field: 'catColor' | 'coatLength' | 'catType' | 'behavior'): Promise<string[]> {
+    const preferences = await this.getPreferences();
+    switch (field) {
+      case 'catColor':
+        return preferences.customCatColors || [];
+      case 'coatLength':
+        return preferences.customCoatLengths || [];
+      case 'catType':
+        return preferences.customCatTypes || [];
+      case 'behavior':
+        return preferences.customBehaviors || [];
+      default:
+        return [];
+    }
+  }
+
+  /**
+   * Add a new custom option for a specific field
+   */
+  async addCustomOption(field: 'catColor' | 'coatLength' | 'catType' | 'behavior', value: string): Promise<void> {
+    const preferences = await this.getPreferences();
+    let updated = false;
+
+    switch (field) {
+      case 'catColor':
+        if (!preferences.customCatColors.includes(value)) {
+          preferences.customCatColors.push(value);
+          updated = true;
+        }
+        break;
+      case 'coatLength':
+        if (!preferences.customCoatLengths.includes(value)) {
+          preferences.customCoatLengths.push(value);
+          updated = true;
+        }
+        break;
+      case 'catType':
+        if (!preferences.customCatTypes.includes(value)) {
+          preferences.customCatTypes.push(value);
+          updated = true;
+        }
+        break;
+      case 'behavior':
+        if (!preferences.customBehaviors.includes(value)) {
+          preferences.customBehaviors.push(value);
+          updated = true;
+        }
+        break;
+    }
+
+    if (updated) {
+      await this.savePreferences(preferences);
+    }
   }
 
   // Helper Methods

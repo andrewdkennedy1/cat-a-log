@@ -7,15 +7,6 @@ import { generateUUID, getCurrentTimestamp } from '../utils/dataUtils';
 
 // Standardized cat colors
 export const CAT_COLORS = [
-  'Black',
-  'White',
-  'Gray',
-  'Orange/Ginger',
-  'Brown/Tabby',
-  'Calico',
-  'Tortoiseshell',
-  'Siamese',
-  'Tuxedo',
   'Mixed/Other',
   'Custom...'
 ] as const;
@@ -23,30 +14,17 @@ export const CAT_COLORS = [
 // Standardized coat lengths
 export const COAT_LENGTHS = [
   'Shorthair',
-  'Medium',
-  'Longhair',
   'Custom...'
 ] as const;
 
 // Standardized cat types
 export const CAT_TYPES = [
-  'Domestic Shorthair',
-  'Domestic Longhair',
-  'Stray',
-  'Feral',
-  'Pet (Outdoor)',
-  'Kitten',
   'Unknown',
   'Custom...'
 ] as const;
 
 // Behavior presets
 export const BEHAVIOR_PRESETS = [
-  'Friendly',
-  'Playful',
-  'Shy',
-  'Sleepy',
-  'Hungry',
   'Curious',
   'Custom...'
 ] as const;
@@ -107,8 +85,6 @@ export function validateCatEncounter(encounter: Partial<CatEncounter>): Validati
 
   if (typeof encounter.behavior !== 'string' || encounter.behavior.trim().length === 0) {
     errors.push('Behavior is required');
-  } else if (encounter.behavior.trim().length === 0) {
-    errors.push('Behavior cannot be empty');
   }
 
   if (!encounter.createdAt || typeof encounter.createdAt !== 'string') {

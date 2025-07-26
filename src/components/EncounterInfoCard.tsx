@@ -11,20 +11,22 @@ interface EncounterInfoCardProps {
   onEdit: (encounter: CatEncounter) => void;
   onDelete: (encounter: CatEncounter) => void;
   className?: string;
+  photoUrl?: string | null;
 }
 
 export function EncounterInfoCard({
   encounter,
   onEdit,
   onDelete,
-  className = ''
+  className = '',
+  photoUrl: initialPhotoUrl = null
 }: EncounterInfoCardProps) {
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(initialPhotoUrl);
   const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
 
-  // Load photo thumbnail if available
+  // Load photo thumbnail if available and not already provided
   useEffect(() => {
-    if (encounter.photoBlobId) {
+    if (encounter.photoBlobId && !initialPhotoUrl) {
       setIsLoadingPhoto(true);
       storageService.getPhoto(encounter.photoBlobId)
         .then(blob => {
@@ -40,10 +42,12 @@ export function EncounterInfoCard({
         .finally(() => {
           setIsLoadingPhoto(false);
         });
+    } else if (initialPhotoUrl) {
+      setPhotoUrl(initialPhotoUrl);
     } else {
       setPhotoUrl(null);
     }
-  }, [encounter.photoBlobId]);
+  }, [encounter.photoBlobId, initialPhotoUrl]);
 
   // Cleanup object URL on unmount or when URL changes
   useEffect(() => {

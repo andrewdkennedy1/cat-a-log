@@ -64,7 +64,7 @@ export interface DatabaseSchema {
   
   metadata: {
     key: string; // setting name
-    value: any;   // setting value
+    value: unknown;   // setting value
   };
 }
 
@@ -78,14 +78,20 @@ export interface CloudBackup {
   metadata: SyncMetadata;
 }
 
+import { GoogleDriveService } from '@/services/GoogleDriveService';
+
 // Application state interfaces
+export interface UserState {
+  isAuthenticated: boolean;
+  googleToken?: string;
+  preferences: UserPreferences;
+  googleDriveService?: GoogleDriveService;
+  googleDriveStatus: 'uninitialized' | 'initializing' | 'initialized' | 'error';
+}
+
 export interface AppState {
   encounters: CatEncounter[];
-  user: {
-    isAuthenticated: boolean;
-    googleToken?: string;
-    preferences: UserPreferences;
-  };
+  user: UserState;
   ui: {
     selectedEncounter?: string;
     mapCenter: [number, number];
@@ -148,7 +154,7 @@ export interface SyncService {
   checkCloudData(): Promise<{ lastModified: Date; hasData: boolean }>;
   
   // Conflict Resolution
-  resolveConflicts(localData: any, cloudData: any): Promise<any>;
+  resolveConflicts(localData: unknown, cloudData: unknown): Promise<unknown>;
 }
 
 // Error handling interfaces
@@ -162,14 +168,14 @@ export interface NetworkError extends Error {
 
 export interface DataConflict {
   field: string;
-  localValue: any;
-  cloudValue: any;
+  localValue: unknown;
+  cloudValue: unknown;
   timestamp: string;
 }
 
 export interface Resolution {
   action: 'use_local' | 'use_cloud' | 'merge';
-  mergedValue?: any;
+  mergedValue?: unknown;
 }
 
 export interface ErrorHandler {

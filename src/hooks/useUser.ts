@@ -5,14 +5,17 @@
 import { useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import type { UserPreferences } from '../types';
+import { GoogleDriveService } from '@/services/GoogleDriveService';
 
 export function useUser() {
-  const { state, dispatch } = useAppContext();
+  const { state, dispatch, showSnackbar } = useAppContext();
 
   // User state getters
   const isAuthenticated = state.user.isAuthenticated;
   const googleToken = state.user.googleToken;
   const preferences = state.user.preferences;
+  const googleDriveService = state.user.googleDriveService;
+  const googleDriveStatus = state.user.googleDriveStatus;
 
   // Authentication actions
   const setAuthenticated = useCallback((authenticated: boolean) => {
@@ -26,12 +29,26 @@ export function useUser() {
   const logout = useCallback(() => {
     dispatch({ type: 'SET_AUTHENTICATED', payload: false });
     dispatch({ type: 'SET_GOOGLE_TOKEN', payload: undefined });
+    dispatch({ type: 'SET_GOOGLE_DRIVE_SERVICE', payload: undefined });
   }, [dispatch]);
 
   // Google token actions
   const setGoogleToken = useCallback((token: string | undefined) => {
     dispatch({ type: 'SET_GOOGLE_TOKEN', payload: token });
   }, [dispatch]);
+
+  const initializeGoogleDrive = useCallback(async (token: string) => {
+    try {
+      const driveService = new GoogleDriveService(token);
+      await driveService.init();
+      dispatch({ type: 'SET_GOOGLE_DRIVE_SERVICE', payload: driveService });
+      showSnackbar('Google Drive connected successfully!', 'success');
+    } catch (error) {
+      console.error(error);
+      showSnackbar((error as Error).message, 'error');
+      dispatch({ type: 'SET_GOOGLE_DRIVE_SERVICE', payload: undefined });
+    }
+  }, [dispatch, showSnackbar]);
 
   // Preferences actions
   const setPreferences = useCallback((newPreferences: UserPreferences) => {
@@ -72,6 +89,8 @@ export function useUser() {
     isAuthenticated,
     googleToken,
     preferences,
+    googleDriveService,
+    googleDriveStatus,
     
     // Computed state
     hasGoogleToken,
@@ -82,6 +101,7 @@ export function useUser() {
     login,
     logout,
     setGoogleToken,
+    initializeGoogleDrive,
     
     // Preferences actions
     setPreferences,

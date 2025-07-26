@@ -1,257 +1,197 @@
-/**
- * Service for interacting with Google Drive API
- */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { CatEncounter } from "@/types";
 
-declare global {
-  interface Window {
-    google: {
-      accounts: {
-        oauth2: {
-          initTokenClient: (config: any) => any;
-          hasGrantedAllScopes: (token: any, ...scopes: string[]) => boolean;
-        };
-      };
-    };
-    gapi: {
-      load: (api: string, callback: () => void) => void;
-      client: {
-        init: (config: any) => Promise<void>;
-        request: (config: any) => Promise<any>;
-        drive: {
-          files: {
-            list: (params: any) => Promise<any>;
-            create: (params: any) => Promise<any>;
-            get: (params: any) => Promise<any>;
-          };
-        };
-      };
-    };
-  }
-}
+declare const gapi: any;
 
-interface GoogleAuthResponse {
-  access_token: string;
-  expires_in: number;
-  scope: string;
-  token_type: string;
-}
+const FOLDER_NAME = 'CAT-a-log-data';
+const METADATA_FILE_NAME = 'encounters.json';
+const PHOTOS_FOLDER_NAME = 'photos';
 
-class GoogleDriveService {
-  private static instance: GoogleDriveService;
-  private tokenClient: any = null;
-  private accessToken: string | null = null;
-  private readonly CLIENT_ID = '304619344995-56ll4mek5dnu6lo4d8j9tn44ffqhlmel.apps.googleusercontent.com';
-  private readonly SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
-  private readonly DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+export class GoogleDriveService {
+  private driveReady = false;
+  private folderId: string | null = null;
+  private photosFolderId: string | null = null;
+  private accessToken: string;
 
-  private constructor() {
-    // Private constructor to prevent direct instantiation
-  }
-
-  public static getInstance(): GoogleDriveService {
-    if (!GoogleDriveService.instance) {
-      GoogleDriveService.instance = new GoogleDriveService();
+  constructor(accessToken: string) {
+    if (!accessToken) {
+      throw new Error("Google Drive API access token is required.");
     }
-    return GoogleDriveService.instance;
+    this.accessToken = accessToken;
   }
 
-  private async initializeGapi(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!window.gapi) {
-        // Load GAPI script dynamically if not already loaded
-        const script = document.createElement('script');
-        script.src = 'https://apis.google.com/js/api.js';
-        script.onload = () => {
-          window.gapi.load('client', async () => {
-            try {
-              await window.gapi.client.init({
-                discoveryDocs: [this.DISCOVERY_DOC],
-              });
-              resolve();
-            } catch (error) {
-              reject(error);
-            }
-          });
-        };
-        script.onerror = reject;
-        document.head.appendChild(script);
-      } else {
-        window.gapi.load('client', async () => {
-          try {
-            await window.gapi.client.init({
-              discoveryDocs: [this.DISCOVERY_DOC],
-            });
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-        });
-      }
-    });
-  }
-
-  private initializeTokenClient(): void {
-    if (!window.google?.accounts?.oauth2) {
-      throw new Error('Google Identity Services not loaded');
-    }
-
-    this.tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: this.CLIENT_ID,
-      scope: this.SCOPES,
-      callback: (response: GoogleAuthResponse) => {
-        if (response.access_token) {
-          this.accessToken = response.access_token;
-          // Store token in localStorage for persistence
-          localStorage.setItem('google_access_token', response.access_token);
-          localStorage.setItem('google_token_expires', (Date.now() + response.expires_in * 1000).toString());
-        }
-      },
-    });
-  }
-
-  public async authenticate(): Promise<string> {
+  public async init() {
     try {
-      // Check if we have a valid stored token
-      const storedToken = localStorage.getItem('google_access_token');
-      const tokenExpires = localStorage.getItem('google_token_expires');
-      
-      if (storedToken && tokenExpires && Date.now() < parseInt(tokenExpires)) {
-        this.accessToken = storedToken;
-        return storedToken;
+      if (typeof gapi === 'undefined' || !gapi.client) {
+        throw new Error("Google API client not loaded.");
       }
 
-      // Initialize GAPI and token client if not already done
-      await this.initializeGapi();
+      gapi.client.setToken({ access_token: this.accessToken });
+      await gapi.client.load('drive', 'v3');
       
-      if (!this.tokenClient) {
-        this.initializeTokenClient();
-      }
+      this.folderId = await this.findOrCreateFolder(FOLDER_NAME);
+      this.photosFolderId = await this.findOrCreateFolder(PHOTOS_FOLDER_NAME, this.folderId);
 
-      // Request new token
-      return new Promise((resolve, reject) => {
-        const originalCallback = this.tokenClient.callback;
-        this.tokenClient.callback = (response: GoogleAuthResponse) => {
-          originalCallback(response);
-          if (response.access_token) {
-            resolve(response.access_token);
-          } else {
-            reject(new Error('Authentication failed'));
-          }
-        };
-        
-        this.tokenClient.requestAccessToken();
-      });
-    } catch (error) {
-      console.error('Authentication failed:', error);
-      throw error;
+      this.driveReady = true;
+      console.log('Google Drive Service Initialized');
+    } catch (error: any) {
+      console.error('Error initializing Google Drive service:', error);
+      if (error.result && error.result.error) {
+        throw new Error(`Google Drive API Error: ${error.result.error.message}`);
+      }
+      throw new Error(`Failed to initialize Google Drive: ${error.message || 'Unknown error'}`);
     }
   }
 
-  public isAuthenticated(): boolean {
-    const storedToken = localStorage.getItem('google_access_token');
-    const tokenExpires = localStorage.getItem('google_token_expires');
+  private async findOrCreateFolder(name: string, parentId?: string | null): Promise<string> {
+    const query = `name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parentId ? ` and '${parentId}' in parents` : ''}`;
     
-    return !!(storedToken && tokenExpires && Date.now() < parseInt(tokenExpires));
-  }
+    const listResult = await gapi.client.drive.files.list({
+      q: query,
+      fields: 'files(id)',
+    });
 
-  public logout(): void {
-    this.accessToken = null;
-    localStorage.removeItem('google_access_token');
-    localStorage.removeItem('google_token_expires');
-  }
-
-  private async ensureAuthenticated(): Promise<void> {
-    if (!this.isAuthenticated()) {
-      await this.authenticate();
-    }
-  }
-
-  public async uploadJsonFile(fileName: string, content: string): Promise<void> {
-    try {
-      await this.ensureAuthenticated();
-      await this.initializeGapi();
-
-      const metadata = {
-        name: fileName,
-        parents: ['appDataFolder'],
+    if (listResult.result.files && listResult.result.files.length > 0) {
+      return listResult.result.files[0].id!;
+    } else {
+      const folderMetadata = {
+        name,
+        mimeType: 'application/vnd.google-apps.folder',
+        ...(parentId && { parents: [parentId] }),
       };
-
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', new Blob([content], { type: 'application/json' }));
-
-      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
-        },
-        body: form,
+      const createResult = await gapi.client.drive.files.create({
+        resource: folderMetadata,
+        fields: 'id',
       });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      console.log(`Successfully uploaded ${fileName} to Google Drive`);
-    } catch (error) {
-      console.error('Upload failed:', error);
-      throw error;
+      return createResult.result.id!;
     }
   }
 
-  public async getLatestFile(): Promise<{ id: string, name: string, content: string } | null> {
-    try {
-      await this.ensureAuthenticated();
-      await this.initializeGapi();
+  private async getEncountersFileId(): Promise<string | null> {
+    if (!this.driveReady) throw new Error('Google Drive not initialized');
+    const fileResult = await gapi.client.drive.files.list({
+      q: `name='${METADATA_FILE_NAME}' and '${this.folderId}' in parents and trashed=false`,
+      fields: 'files(id)',
+    });
+    return fileResult.result.files && fileResult.result.files.length > 0 ? fileResult.result.files[0].id : null;
+  }
 
-      // List files in appDataFolder, ordered by modified time descending
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=parents in 'appDataFolder'&orderBy=modifiedTime desc&pageSize=1`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`,
+  public async saveEncounters(encounters: CatEncounter[]): Promise<void> {
+    if (!this.driveReady) throw new Error('Google Drive not initialized');
+    const fileId = await this.getEncountersFileId();
+    
+    const metadata = {
+      name: METADATA_FILE_NAME,
+      mimeType: 'application/json',
+      parents: this.folderId ? [this.folderId] : undefined,
+    };
+    
+    const boundary = '-------314159265358979323846';
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const close_delim = `\r\n--${boundary}--`;
+
+    const multipartRequestBody =
+      `${delimiter}Content-Type: application/json\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+      `${delimiter}Content-Type: application/json\r\n\r\n${JSON.stringify(encounters, null, 2)}${close_delim}`;
+
+    const request = gapi.client.request({
+      path: `/upload/drive/v3/files${fileId ? `/${fileId}` : ''}`,
+      method: fileId ? 'PATCH' : 'POST',
+      params: { uploadType: 'multipart' },
+      headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` },
+      body: multipartRequestBody,
+    });
+
+    await request;
+  }
+
+  public async loadEncounters(): Promise<CatEncounter[]> {
+    if (!this.driveReady) throw new Error('Google Drive not initialized');
+    const fileId = await this.getEncountersFileId();
+    if (!fileId) return [];
+
+    const response = await gapi.client.drive.files.get({
+      fileId: fileId,
+      alt: 'media',
+    });
+
+    return JSON.parse(response.body) as CatEncounter[];
+  }
+
+  public async savePhoto(photo: File): Promise<string> {
+    if (!this.driveReady || !this.photosFolderId) throw new Error('Google Drive not initialized or photos folder not found');
+    
+    const metadata = {
+      name: photo.name,
+      mimeType: photo.type,
+      parents: [this.photosFolderId],
+    };
+
+    const boundary = '-------314159265358979323846';
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const close_delim = `\r\n--${boundary}--`;
+
+    const fileReader = new FileReader();
+    const base64Data = await new Promise<string>(resolve => {
+      fileReader.onload = () => resolve((fileReader.result as string).split(',')[1]);
+      fileReader.readAsDataURL(photo);
+    });
+
+    const multipartRequestBody =
+      `${delimiter}Content-Type: application/json\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+      `${delimiter}Content-Type: ${photo.type}\r\n` +
+      `Content-Transfer-Encoding: base64\r\n\r\n${base64Data}${close_delim}`;
+
+    const request = gapi.client.request({
+      path: '/upload/drive/v3/files',
+      method: 'POST',
+      params: { uploadType: 'multipart' },
+      headers: { 'Content-Type': `multipart/related; boundary="${boundary}"` },
+      body: multipartRequestBody,
+    });
+
+    const response = await request;
+    if (!response.result.id) {
+      throw new Error("Failed to save photo to Google Drive.");
+    }
+    return response.result.id;
+  }
+
+  public async getPhoto(fileId: string): Promise<Blob> {
+    if (!this.driveReady) throw new Error('Google Drive not initialized');
+    const response = await gapi.client.drive.files.get({
+      fileId: fileId,
+      alt: 'media',
+    });
+    
+    const blob = await fetch(`data:;base64,${btoa(response.body)}`).then(res => res.blob());
+    return blob;
+  }
+
+  public authenticate(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      try {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: '304619344995-56ll4mek5dnu6lo4d8j9tn44ffqhlmel.apps.googleusercontent.com',
+          scope: 'https://www.googleapis.com/auth/drive.appdata',
+          callback: (response: any) => {
+            if (response.error) {
+              return reject(response);
+            }
+            this.accessToken = response.access_token;
+            resolve(response.access_token);
           },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to list files: ${response.statusText}`);
+        });
+        tokenClient.requestAccessToken();
+      } catch (error) {
+        reject(error);
       }
+    });
+  }
 
-      const data = await response.json();
-      
-      if (!data.files || data.files.length === 0) {
-        return null;
-      }
-
-      const file = data.files[0];
-
-      // Download file content
-      const contentResponse = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.accessToken}`,
-          },
-        }
-      );
-
-      if (!contentResponse.ok) {
-        throw new Error(`Failed to download file: ${contentResponse.statusText}`);
-      }
-
-      const content = await contentResponse.text();
-
-      return {
-        id: file.id,
-        name: file.name,
-        content,
-      };
-    } catch (error) {
-      console.error('Failed to get latest file:', error);
-      throw error;
+  public logout() {
+    if (this.accessToken) {
+      (window as any).google.accounts.oauth2.revoke(this.accessToken, () => {});
     }
   }
 }
-
-export const googleDriveService = GoogleDriveService.getInstance();

@@ -10,7 +10,7 @@ function AppContent() {
   const { snackbar, showSnackbar } = useSnackbar();
 
   return (
-    <>
+    <AppProvider showSnackbar={showSnackbar}>
       <AuthHandler />
       <ModernApp />
       {snackbar && (
@@ -20,16 +20,14 @@ function AppContent() {
           onClose={() => showSnackbar('', 'success')}
         />
       )}
-    </>
+    </AppProvider>
   );
 }
 
 function App() {
   return (
     <ErrorBoundary>
-      <AppProvider showSnackbar={() => {}}>
-        <AppContent />
-      </AppProvider>
+      <AppContent />
     </ErrorBoundary>
   )
 }

@@ -6,32 +6,40 @@ import { useState } from 'react';
 import { Cloud, CloudOff, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { googleDriveService } from '@/services/GoogleDriveService';
 import { useUser } from '@/hooks/useUser';
+import { useSnackbar } from '@/hooks/useSnackbar';
+import { GoogleDriveService } from '@/services/GoogleDriveService';
 
 export function ModernGoogleLogin() {
   const [isLoading, setIsLoading] = useState(false);
-  const { isAuthenticated, setAuthenticated, setGoogleToken, logout } = useUser();
+  const { isAuthenticated, setAuthenticated, setGoogleToken, logout, initializeGoogleDrive, googleToken } = useUser();
+  const { showSnackbar } = useSnackbar();
 
   const handleLogin = async () => {
     setIsLoading(true);
     try {
-      const token = await googleDriveService.authenticate();
+      const driveService = new GoogleDriveService('');
+      const token = await driveService.authenticate();
       setGoogleToken(token);
       setAuthenticated(true);
+      await initializeGoogleDrive(token);
     } catch (error) {
       console.error('Google login failed:', error);
+      showSnackbar('Google login failed. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
-    googleDriveService.logout();
+    if (googleToken) {
+      const driveService = new GoogleDriveService(googleToken);
+      driveService.logout();
+    }
     logout();
   };
 
-  const isGoogleAuthenticated = googleDriveService.isAuthenticated();
+  const isGoogleAuthenticated = !!googleToken;
 
   if (isAuthenticated && isGoogleAuthenticated) {
     return (
