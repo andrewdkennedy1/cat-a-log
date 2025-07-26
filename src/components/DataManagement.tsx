@@ -1,8 +1,8 @@
-import React from 'react';
+import type { ChangeEvent } from 'react';
 
 interface DataManagementProps {
   onExport: () => void;
-  onImport: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onImport: (event: ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function DataManagement({ onExport, onImport }: DataManagementProps) {

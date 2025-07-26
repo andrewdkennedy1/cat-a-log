@@ -2,8 +2,8 @@
  * Global application state management using React Context and useReducer
  */
 
-import React, { createContext, useContext, useReducer } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, useReducer } from 'react';
+import type { ReactNode, Dispatch } from 'react';
 import type { CatEncounter, UserPreferences, AppState } from '../types';
 
 // Action types for the reducer
@@ -51,7 +51,9 @@ const initialState: AppState = {
     mapCenter: defaultPreferences.defaultMapCenter,
     mapZoom: defaultPreferences.defaultMapZoom,
     isFormOpen: false,
-    syncStatus: 'idle'
+    syncStatus: 'idle',
+    isOnline: true,
+    showOfflineMessage: false
   }
 };
 
@@ -201,7 +203,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 // Context type
 interface AppContextType {
   state: AppState;
-  dispatch: React.Dispatch<AppAction>;
+  dispatch: Dispatch<AppAction>;
   showSnackbar: (message: string, type?: 'success' | 'error') => void;
 }
 
