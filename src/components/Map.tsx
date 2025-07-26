@@ -305,7 +305,9 @@ export const Map: React.FC<ExtendedMapProps> = ({
       marker.bindPopup(popupContent);
 
       // Add click handler
-      marker.on('click', () => {
+      marker.on('click', (e: L.LeafletMouseEvent) => {
+        // Prevent the map's click handler from also firing
+        L.DomEvent.stopPropagation(e);
         onEncounterSelect(encounter);
       });
 
