@@ -37,6 +37,7 @@ describe('Data Transform Utils', () => {
     lng: -74.0060,
     dateTime: '2024-01-15T10:30:00.000Z',
     catColor: 'Black',
+    coatLength: 'Shorthair',
     catType: 'Domestic Shorthair',
     behavior: 'Friendly',
     comment: 'A friendly black cat',
@@ -50,7 +51,11 @@ describe('Data Transform Utils', () => {
     defaultMapZoom: 13,
     autoSync: true,
     photoQuality: 'medium',
-    theme: 'auto'
+    theme: 'auto',
+    customCatColors: [],
+    customCoatLengths: [],
+    customCatTypes: [],
+    customBehaviors: [],
   };
 
   const mockMetadata: SyncMetadata = {

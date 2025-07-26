@@ -16,7 +16,16 @@ export const CAT_COLORS = [
   'Tortoiseshell',
   'Siamese',
   'Tuxedo',
-  'Mixed/Other'
+  'Mixed/Other',
+  'Custom...'
+] as const;
+
+// Standardized coat lengths
+export const COAT_LENGTHS = [
+  'Shorthair',
+  'Medium',
+  'Longhair',
+  'Custom...'
 ] as const;
 
 // Standardized cat types
@@ -27,7 +36,8 @@ export const CAT_TYPES = [
   'Feral',
   'Pet (Outdoor)',
   'Kitten',
-  'Unknown'
+  'Unknown',
+  'Custom...'
 ] as const;
 
 // Behavior presets
@@ -42,6 +52,7 @@ export const BEHAVIOR_PRESETS = [
 ] as const;
 
 export type CatColor = typeof CAT_COLORS[number];
+export type CoatLength = typeof COAT_LENGTHS[number];
 export type CatType = typeof CAT_TYPES[number];
 export type BehaviorPreset = typeof BEHAVIOR_PRESETS[number];
 
@@ -84,17 +95,17 @@ export function validateCatEncounter(encounter: Partial<CatEncounter>): Validati
 
   if (!encounter.catColor || typeof encounter.catColor !== 'string') {
     errors.push('Cat color is required');
-  } else if (!CAT_COLORS.includes(encounter.catColor as CatColor)) {
-    errors.push(`Cat color must be one of: ${CAT_COLORS.join(', ')}`);
+  }
+
+  if (!encounter.coatLength || typeof encounter.coatLength !== 'string') {
+    errors.push('Coat length is required');
   }
 
   if (!encounter.catType || typeof encounter.catType !== 'string') {
     errors.push('Cat type is required');
-  } else if (!CAT_TYPES.includes(encounter.catType as CatType)) {
-    errors.push(`Cat type must be one of: ${CAT_TYPES.join(', ')}`);
   }
 
-  if (typeof encounter.behavior !== 'string') {
+  if (typeof encounter.behavior !== 'string' || encounter.behavior.trim().length === 0) {
     errors.push('Behavior is required');
   } else if (encounter.behavior.trim().length === 0) {
     errors.push('Behavior cannot be empty');
@@ -133,8 +144,9 @@ export function validateCatEncounter(encounter: Partial<CatEncounter>): Validati
 export function createCatEncounter(
   lat: number,
   lng: number,
-  catColor: CatColor,
-  catType: CatType,
+  catColor: string,
+  coatLength: string,
+  catType: string,
   behavior: string,
   options: {
     comment?: string;
@@ -151,6 +163,7 @@ export function createCatEncounter(
     lng,
     dateTime: options.dateTime || now,
     catColor,
+    coatLength,
     catType,
     behavior,
     comment: options.comment,
@@ -199,15 +212,22 @@ export function isValidLongitude(lng: number): boolean {
 /**
  * Validates if a string is a valid cat color
  */
-export function isValidCatColor(color: string): color is CatColor {
-  return CAT_COLORS.includes(color as CatColor);
+export function isValidCatColor(color: string): boolean {
+  return typeof color === 'string' && color.trim().length > 0;
+}
+
+/**
+ * Validates if a string is a valid coat length
+ */
+export function isValidCoatLength(length: string): boolean {
+  return typeof length === 'string' && length.trim().length > 0;
 }
 
 /**
  * Validates if a string is a valid cat type
  */
-export function isValidCatType(type: string): type is CatType {
-  return CAT_TYPES.includes(type as CatType);
+export function isValidCatType(type:string): boolean {
+  return typeof type === 'string' && type.trim().length > 0;
 }
 
 /**

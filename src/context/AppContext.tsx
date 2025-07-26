@@ -31,7 +31,11 @@ const defaultPreferences: UserPreferences = {
   defaultMapZoom: 13,
   autoSync: true,
   photoQuality: 'medium',
-  theme: 'auto'
+  theme: 'auto',
+  customCatColors: [],
+  customCoatLengths: [],
+  customCatTypes: [],
+  customBehaviors: []
 };
 
 // Initial state

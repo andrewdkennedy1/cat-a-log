@@ -343,6 +343,7 @@ describe('EncounterForm', () => {
             expect(mockOnCancel).toHaveBeenCalled();
         });
     });
+});
 
     describe('when not open', () => {
         it('does not render anything', () => {
