@@ -49,7 +49,7 @@ export function Settings({ preferences, onPreferencesChange, showSnackbar }: Set
     showSnackbar('Successfully connected to Google Drive!', 'success');
   };
 
-  const handleLoginError = (error: Error) => {
+  const handleLoginError = () => {
     showSnackbar('Failed to connect to Google Drive. Please try again.', 'error');
   };
 

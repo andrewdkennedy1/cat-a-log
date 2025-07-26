@@ -15,7 +15,6 @@ import { useEncounters } from '@/hooks/useEncounters';
 import { useUI } from '@/hooks/useUI';
 import { useUser } from '@/hooks/useUser';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
-import { cn } from '@/lib/utils';
 import type { CatEncounter } from '@/types';
 
 export function ModernApp() {
@@ -97,7 +96,7 @@ export function ModernApp() {
   };
 
   // Handle location button click
-  const handleLocationButtonClick = (lat: number, lng: number) => {
+  const handleLocationButtonClick = () => {
     // Center map on user location - this would be handled by the Map component
   };
 
@@ -230,7 +229,7 @@ export function ModernApp() {
           </DialogHeader>
           <ModernSettings
             preferences={preferences}
-            onPreferencesChange={(updates) => {
+            onPreferencesChange={() => {
               // Handle preferences update
             }}
             onClose={() => setIsSettingsOpen(false)}
