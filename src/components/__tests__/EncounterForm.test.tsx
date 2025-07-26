@@ -56,7 +56,6 @@ describe('EncounterForm', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.useFakeTimers();
     });
 
     describe('when creating a new encounter', () => {
@@ -111,10 +110,10 @@ describe('EncounterForm', () => {
             // Submit form
             await user.click(screen.getByText('Save'));
 
-            await vi.runAllTimersAsync();
-            expect(mockOnSave).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    id: 'test-uuid-123',
+            await waitFor(() => {
+                expect(mockOnSave).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        id: 'test-uuid-123',
                     lat: 40.7128,
                     lng: -74.0060,
                     catColor: 'Black',
@@ -152,12 +151,13 @@ describe('EncounterForm', () => {
             // Submit form
             await user.click(screen.getByText('Save'));
 
-            await vi.runAllTimersAsync();
-            expect(mockOnSave).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    behavior: 'Hunting mice'
-                })
-            );
+            await waitFor(() => {
+                expect(mockOnSave).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        behavior: 'Hunting mice'
+                    })
+                );
+            });
         });
 
         it('shows character count for comments', () => {
@@ -207,10 +207,11 @@ describe('EncounterForm', () => {
             const submitButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
             await user.click(submitButton);
 
-            await vi.runAllTimersAsync();
-            expect(storageService.savePhoto).toHaveBeenCalledWith(
-                expect.any(Blob)
-            );
+            await waitFor(() => {
+                expect(storageService.savePhoto).toHaveBeenCalledWith(
+                    expect.any(Blob)
+                );
+            });
             expect(mockOnSave).toHaveBeenCalledWith(
                 expect.objectContaining({
                     photoBlobId: 'photo-blob-id-123'
@@ -284,8 +285,9 @@ describe('EncounterForm', () => {
                 />
             );
 
-            await vi.runAllTimersAsync();
-            expect(storageService.getPhoto).toHaveBeenCalledWith('existing-photo-id');
+            await waitFor(() => {
+                expect(storageService.getPhoto).toHaveBeenCalledWith('existing-photo-id');
+            });
         });
 
         it('handles photo removal when editing', async () => {
@@ -313,15 +315,15 @@ describe('EncounterForm', () => {
             const submitButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
             await user.click(submitButton);
 
-            await vi.runAllTimersAsync();
-            expect(storageService.deletePhoto).toHaveBeenCalledWith('existing-photo-id');
-            expect(mockOnSave).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    photoBlobId: undefined
-                })
-            );
+            await waitFor(() => {
+                expect(storageService.deletePhoto).toHaveBeenCalledWith('existing-photo-id');
+                expect(mockOnSave).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        photoBlobId: undefined
+                    })
+                );
+            });
         });
-    });
 
     describe('form interactions', () => {
         it('calls onCancel when cancel button is clicked', async () => {

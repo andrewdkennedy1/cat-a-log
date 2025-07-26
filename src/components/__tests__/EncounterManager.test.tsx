@@ -53,6 +53,18 @@ vi.mock('leaflet.markercluster', () => ({}));
 
 const mockStorageService = storageService as any;
 
+import { AppProvider } from '../../context/AppContext';
+
+const mockShowSnackbar = vi.fn();
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(
+    <AppProvider showSnackbar={mockShowSnackbar}>
+      {ui}
+    </AppProvider>
+  );
+};
+
 describe('EncounterManager Integration', () => {
   const mockEncounter: CatEncounter = {
     id: 'test-id',
@@ -73,10 +85,23 @@ describe('EncounterManager Integration', () => {
     mockStorageService.getPhoto.mockResolvedValue(null);
     mockStorageService.saveEncounter.mockResolvedValue(undefined);
     mockStorageService.deleteEncounter.mockResolvedValue(undefined);
+
+    // Mock FileReader
+    const mockFileReader = {
+      readAsText: vi.fn().mockImplementation(function(this: any, file: File) {
+        this.onload({ target: { result: '{"encounters": [], "photos": {}}' } });
+      }),
+      onload: vi.fn(),
+    };
+    vi.stubGlobal('FileReader', vi.fn(() => mockFileReader));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders the encounter manager with map and add button', async () => {
-    render(<EncounterManager />);
+    renderWithProviders(<EncounterManager />);
     
     // Should load encounters on mount
     await waitFor(() => {
@@ -88,7 +113,7 @@ describe('EncounterManager Integration', () => {
   });
 
   it('opens form when add button is clicked', async () => {
-    render(<EncounterManager />);
+    renderWithProviders(<EncounterManager />);
     
     await waitFor(() => {
       expect(mockStorageService.getEncounters).toHaveBeenCalled();
@@ -101,15 +126,128 @@ describe('EncounterManager Integration', () => {
     expect(screen.getByText('Log Cat Encounter')).toBeInTheDocument();
   });
 
-  it('handles encounter deletion', async () => {
-    render(<EncounterManager />);
+  it('handles encounter deletion with confirmation', async () => {
+    // Need to mock the Map component to trigger the delete action
+    vi.mock('../Map', () => ({
+      Map: ({ onEncounterDelete }: { onEncounterDelete: (e: CatEncounter) => void }) => (
+        <button onClick={() => onEncounterDelete(mockEncounter)}>Delete Encounter</button>
+      )
+    }));
+
+    renderWithProviders(<EncounterManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete Encounter')).toBeInTheDocument();
+    });
+
+    // Click the delete button
+    fireEvent.click(screen.getByText('Delete Encounter'));
+
+    // Confirmation dialog should appear
+    expect(screen.getByText('Are you sure you want to delete this encounter?')).toBeInTheDocument();
+
+    // Click confirm
+    fireEvent.click(screen.getByText('Delete'));
+
+    await waitFor(() => {
+      expect(mockStorageService.deleteEncounter).toHaveBeenCalledWith('test-id');
+    });
+  });
+
+  it('opens settings modal and handles preference changes', async () => {
+    renderWithProviders(<EncounterManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Settings')).toBeInTheDocument();
+    });
+
+    // Click the settings button
+    fireEvent.click(screen.getByText('Settings'));
+
+    // Settings modal should appear
+    expect(screen.getByText('Theme')).toBeInTheDocument();
+
+    // Change the theme
+    fireEvent.change(screen.getByLabelText('Theme'), { target: { value: 'dark' } });
+
+    // The component should call the dispatch function with the correct action
+    // This is a bit tricky to test without exposing the dispatch function,
+    // but we can check if the snackbar appears
+    await waitFor(() => {
+      expect(mockShowSnackbar).toHaveBeenCalledWith('Settings saved.');
+    });
+  });
+
+  it('handles data export', async () => {
+    renderWithProviders(<EncounterManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Export Data')).toBeInTheDocument();
+    });
+
+    // Click the export button
+    fireEvent.click(screen.getByText('Export Data'));
+
+    // We can't easily test the download functionality, but we can check if the snackbar appears
+    await waitFor(() => {
+      expect(mockShowSnackbar).toHaveBeenCalledWith('Data exported successfully.');
+    });
+  });
+
+  it('handles data import', async () => {
+    renderWithProviders(<EncounterManager />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('import-input')).toBeInTheDocument();
+    });
+
+    const file = new File(['{"encounters": [], "photos": {}}'], 'test.json', { type: 'application/json' });
+    const input = screen.getByTestId('import-input');
+
+    await waitFor(() => {
+        fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(mockShowSnackbar).toHaveBeenCalledWith('Data imported successfully.');
+    });
+  });
+});
+
+vi.mock('../Map', () => ({
+  Map: ({ onEncounterDelete, onEncounterEdit, onEncounterSelect, onLocationSelect }: any) => (
+    <div>
+      <button onClick={() => onEncounterDelete(mockEncounter)}>Delete Encounter</button>
+      <button onClick={() => onEncounterEdit(mockEncounter)}>Edit Encounter</button>
+      <button onClick={() => onEncounterSelect(mockEncounter)}>Select Encounter</button>
+      <button onClick={() => onLocationSelect(40, -74)}>Select Location</button>
+    </div>
+  )
+}));
+
+vi.mock('../DataManagement', () => ({
+  DataManagement: ({ onExport, onImport }: any) => (
+    <div>
+      <button onClick={onExport}>Export Data</button>
+      <label htmlFor="import-file">
+        Import Data
+        <input
+          id="import-file"
+          type="file"
+          data-testid="import-input"
+          onChange={onImport}
+        />
+      </label>
+    </div>
+  )
+}));
+    renderWithProviders(<EncounterManager />);
     
+    // Should load encounters on mount
     await waitFor(() => {
       expect(mockStorageService.getEncounters).toHaveBeenCalled();
     });
     
-    // The actual deletion would be triggered through the Map component
-    // This test verifies the integration works
-    expect(mockStorageService.getEncounters).toHaveBeenCalled();
+    // Should show the add cat button
+    expect(screen.getByTitle('Log Cat Encounter')).toBeInTheDocument();
   });
-});
