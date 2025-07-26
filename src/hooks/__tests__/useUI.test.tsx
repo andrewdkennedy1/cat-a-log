@@ -10,7 +10,7 @@ import { useUI } from '../useUI';
 
 // Test wrapper component
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <AppProvider>{children}</AppProvider>
+  <AppProvider showSnackbar={() => {}}>{children}</AppProvider>
 );
 
 describe('useUI', () => {

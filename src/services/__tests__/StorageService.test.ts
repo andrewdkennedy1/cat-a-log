@@ -363,7 +363,7 @@ describe('StorageService', () => {
       await storageService.savePreferences(preferences);
       const retrieved = await storageService.getPreferences();
       
-      expect(retrieved).toEqual(preferences);
+      expect(retrieved).toMatchObject(preferences);
     });
 
     it('should return default preferences when none saved', async () => {

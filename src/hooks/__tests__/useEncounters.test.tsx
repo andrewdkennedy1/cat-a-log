@@ -11,7 +11,7 @@ import type { CatEncounter } from '../../types';
 
 // Test wrapper component
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <AppProvider>{children}</AppProvider>
+  <AppProvider showSnackbar={() => {}}>{children}</AppProvider>
 );
 
 // Mock encounter data

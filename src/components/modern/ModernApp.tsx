@@ -151,7 +151,7 @@ export function ModernApp() {
 
   const renderGridView = () => (
     <div className="h-full overflow-y-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredEncounters.length === 0 ? (
           <div className="col-span-full">
             <Card className="p-8 text-center">
@@ -210,7 +210,7 @@ export function ModernApp() {
 
           <div className="flex items-center gap-2">
             {/* Search */}
-            <div className="relative">
+            <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search encounters..."
@@ -221,7 +221,7 @@ export function ModernApp() {
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex border rounded-lg">
+            <div className="hidden md:flex border rounded-lg">
               <Button
                 variant={viewMode === 'map' ? 'default' : 'ghost'}
                 size="sm"
@@ -260,6 +260,52 @@ export function ModernApp() {
                   <DialogTitle>Menu</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-2">
+                  <div className="md:hidden">
+                    <div className="relative mb-2">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full"
+                      />
+                    </div>
+                    <div className="flex border rounded-lg mb-2">
+                      <Button
+                        variant={viewMode === 'map' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => {
+                          setViewMode('map');
+                          setIsMenuOpen(false);
+                        }}
+                        className="flex-1 rounded-r-none"
+                      >
+                        <MapIcon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => {
+                          setViewMode('list');
+                          setIsMenuOpen(false);
+                        }}
+                        className="flex-1 rounded-none border-x"
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => {
+                          setViewMode('grid');
+                          setIsMenuOpen(false);
+                        }}
+                        className="flex-1 rounded-l-none"
+                      >
+                        <Grid className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                   <Button
                     variant="ghost"
                     className="w-full justify-start"
@@ -338,22 +384,20 @@ export function ModernApp() {
         )}
       </div>
 
-      {/* Floating Add Button for List/Grid Views */}
-      {viewMode !== 'map' && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <Button
-            onClick={() => {
-              setFormLocation(undefined);
-              setEditingEncounter(undefined);
-              openForm();
-            }}
-            size="lg"
-            className="h-14 w-14 rounded-full shadow-lg"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </div>
-      )}
+      {/* Floating Add Button for Mobile */}
+      <div className="fixed bottom-6 right-6 z-50 md:hidden">
+        <Button
+          onClick={() => {
+            setFormLocation(undefined);
+            setEditingEncounter(undefined);
+            openForm();
+          }}
+          size="lg"
+          className="h-14 w-14 rounded-full shadow-lg"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </div>
 
       {/* Dialogs - Outside main container to ensure proper z-index */}
       <ModernEncounterForm

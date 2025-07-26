@@ -11,7 +11,7 @@ import type { UserPreferences } from '../../types';
 
 // Test wrapper component
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <AppProvider>{children}</AppProvider>
+  <AppProvider showSnackbar={() => {}}>{children}</AppProvider>
 );
 
 describe('useUser', () => {
