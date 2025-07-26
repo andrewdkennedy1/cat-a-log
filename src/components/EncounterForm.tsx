@@ -2,10 +2,11 @@
  * EncounterForm - Modal component for creating and editing cat encounters
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { EncounterFormProps, CatEncounter } from '../types';
 import { 
-  CAT_COLORS, 
+  CAT_COLORS,
+  COAT_LENGTHS,
   CAT_TYPES, 
   BEHAVIOR_PRESETS,
   createCatEncounter,
@@ -14,6 +15,7 @@ import {
   type CatColor,
   type CatType
 } from '../models/CatEncounter';
+import { useAppContext } from '../context/AppContext';
 import { getCurrentTimestamp } from '../utils/dataUtils';
 import { PhotoInput } from './PhotoInput';
 import { storageService } from '../services/StorageService';
@@ -27,9 +29,16 @@ export function EncounterForm({
   onSave, 
   onCancel 
 }: EncounterFormProps) {
+  const { state, dispatch } = useAppContext();
+  const { preferences } = state.user;
+
   // Form state
   const [catColor, setCatColor] = useState<CatColor>('Mixed/Other');
+  const [customCatColor, setCustomCatColor] = useState('');
+  const [coatLength, setCoatLength] = useState('Shorthair');
+  const [customCoatLength, setCustomCoatLength] = useState('');
   const [catType, setCatType] = useState<CatType>('Domestic Shorthair');
+  const [customCatType, setCustomCatType] = useState('');
   const [behavior, setBehavior] = useState('Friendly');
   const [customBehavior, setCustomBehavior] = useState('');
   const [comment, setComment] = useState('');
@@ -66,7 +75,11 @@ export function EncounterForm({
       } else {
         // Creating new encounter - reset to defaults
         setCatColor('Mixed/Other');
+        setCustomCatColor('');
+        setCoatLength('Shorthair');
+        setCustomCoatLength('');
         setCatType('Domestic Shorthair');
+        setCustomCatType('');
         setBehavior('Friendly');
         setCustomBehavior('');
         setComment('');
@@ -129,10 +142,28 @@ export function EncounterForm({
     setErrors([]);
 
     try {
-      // Determine final behavior value
+      // Determine final values
+      const finalCatColor = catColor === 'Custom...' ? customCatColor.trim() : catColor;
+      const finalCoatLength = coatLength === 'Custom...' ? customCoatLength.trim() : coatLength;
+      const finalCatType = catType === 'Custom...' ? customCatType.trim() : catType;
       const finalBehavior = behavior === 'Custom...' ? customBehavior.trim() : behavior;
       
       // Validate required fields
+      if (!finalCatColor) {
+        setErrors(['Cat color is required']);
+        setIsSubmitting(false);
+        return;
+      }
+      if (!finalCoatLength) {
+        setErrors(['Coat length is required']);
+        setIsSubmitting(false);
+        return;
+      }
+      if (!finalCatType) {
+        setErrors(['Cat type is required']);
+        setIsSubmitting(false);
+        return;
+      }
       if (!finalBehavior) {
         setErrors(['Behavior is required']);
         setIsSubmitting(false);
@@ -181,8 +212,9 @@ export function EncounterForm({
       if (initialData && initialData.id) {
         // Update existing encounter
         encounter = updateCatEncounter(initialData as CatEncounter, {
-          catColor,
-          catType,
+          catColor: finalCatColor,
+          coatLength: finalCoatLength,
+          catType: finalCatType,
           behavior: finalBehavior,
           comment: comment.trim() || undefined,
           dateTime: formatInputForISO(dateTime),
@@ -202,8 +234,9 @@ export function EncounterForm({
         encounter = createCatEncounter(
           location.lat,
           location.lng,
-          catColor,
-          catType,
+          finalCatColor,
+          finalCoatLength,
+          finalCatType,
           finalBehavior,
           {
             comment: comment.trim() || undefined,
@@ -223,6 +256,22 @@ export function EncounterForm({
 
       // Save the encounter
       onSave(encounter);
+
+      // Update user preferences with new custom values
+      const updatedPreferences = { ...preferences };
+      if (catColor === 'Custom...' && !preferences.customCatColors.includes(finalCatColor)) {
+        updatedPreferences.customCatColors = [...preferences.customCatColors, finalCatColor];
+      }
+      if (coatLength === 'Custom...' && !preferences.customCoatLengths.includes(finalCoatLength)) {
+        updatedPreferences.customCoatLengths = [...preferences.customCoatLengths, finalCoatLength];
+      }
+      if (catType === 'Custom...' && !preferences.customCatTypes.includes(finalCatType)) {
+        updatedPreferences.customCatTypes = [...preferences.customCatTypes, finalCatType];
+      }
+      if (behavior === 'Custom...' && !preferences.customBehaviors.includes(finalBehavior)) {
+        updatedPreferences.customBehaviors = [...preferences.customBehaviors, finalBehavior];
+      }
+      dispatch({ type: 'UPDATE_USER_PREFERENCES', payload: updatedPreferences });
       
     } catch (error) {
       console.error('Error saving encounter:', error);
@@ -230,10 +279,10 @@ export function EncounterForm({
       setIsSubmitting(false);
     }
   }, [
-    catColor, 
-    catType, 
-    behavior, 
-    customBehavior, 
+    catColor, customCatColor,
+    coatLength, customCoatLength,
+    catType, customCatType,
+    behavior, customBehavior,
     comment, 
     dateTime, 
     photo,
@@ -241,8 +290,15 @@ export function EncounterForm({
     location, 
     initialData, 
     onSave, 
-    formatInputForISO
+    formatInputForISO,
+    dispatch,
+    preferences
   ]);
+
+  const catColors = useMemo(() => [...CAT_COLORS.slice(0, -1), ...preferences.customCatColors, 'Custom...'], [preferences.customCatColors]);
+  const coatLengths = useMemo(() => [...COAT_LENGTHS.slice(0, -1), ...preferences.customCoatLengths, 'Custom...'], [preferences.customCoatLengths]);
+  const catTypes = useMemo(() => [...CAT_TYPES.slice(0, -1), ...preferences.customCatTypes, 'Custom...'], [preferences.customCatTypes]);
+  const behaviorPresets = useMemo(() => [...BEHAVIOR_PRESETS.slice(0, -1), ...preferences.customBehaviors, 'Custom...'], [preferences.customBehaviors]);
 
   // Handle cancel
   const handleCancel = useCallback(() => {
@@ -250,6 +306,30 @@ export function EncounterForm({
     setIsSubmitting(false);
     onCancel();
   }, [onCancel]);
+
+  // Handle cat color change
+  const handleCatColorChange = useCallback((value: string) => {
+    setCatColor(value as CatColor);
+    if (value !== 'Custom...') {
+      setCustomCatColor('');
+    }
+  }, []);
+
+  // Handle coat length change
+  const handleCoatLengthChange = useCallback((value: string) => {
+    setCoatLength(value);
+    if (value !== 'Custom...') {
+      setCustomCoatLength('');
+    }
+  }, []);
+
+  // Handle cat type change
+  const handleCatTypeChange = useCallback((value: string) => {
+    setCatType(value as CatType);
+    if (value !== 'Custom...') {
+      setCustomCatType('');
+    }
+  }, []);
 
   // Handle behavior change
   const handleBehaviorChange = useCallback((value: string) => {
@@ -314,17 +394,75 @@ export function EncounterForm({
             <select
               id="catColor"
               value={catColor}
-              onChange={(e) => setCatColor(e.target.value as CatColor)}
+              onChange={(e) => handleCatColorChange(e.target.value)}
               className="form-select"
               required
             >
-              {CAT_COLORS.map((color) => (
+              {catColors.map((color) => (
                 <option key={color} value={color}>
                   {color}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Custom Cat Color Input */}
+          {catColor === 'Custom...' && (
+            <div className="form-group">
+              <label htmlFor="customCatColor" className="form-label">
+                Custom Color *
+              </label>
+              <input
+                id="customCatColor"
+                type="text"
+                value={customCatColor}
+                onChange={(e) => setCustomCatColor(e.target.value)}
+                className="form-input"
+                placeholder="Describe the cat's color..."
+                required
+                maxLength={100}
+              />
+            </div>
+          )}
+
+          {/* Coat Length */}
+          <div className="form-group">
+            <label htmlFor="coatLength" className="form-label">
+              Coat Length *
+            </label>
+            <select
+              id="coatLength"
+              value={coatLength}
+              onChange={(e) => handleCoatLengthChange(e.target.value)}
+              className="form-select"
+              required
+            >
+              {coatLengths.map((length) => (
+                <option key={length} value={length}>
+                  {length}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Custom Coat Length Input */}
+          {coatLength === 'Custom...' && (
+            <div className="form-group">
+              <label htmlFor="customCoatLength" className="form-label">
+                Custom Coat Length *
+              </label>
+              <input
+                id="customCoatLength"
+                type="text"
+                value={customCoatLength}
+                onChange={(e) => setCustomCoatLength(e.target.value)}
+                className="form-input"
+                placeholder="Describe the cat's coat length..."
+                required
+                maxLength={100}
+              />
+            </div>
+          )}
 
           {/* Cat Type */}
           <div className="form-group">
@@ -334,17 +472,36 @@ export function EncounterForm({
             <select
               id="catType"
               value={catType}
-              onChange={(e) => setCatType(e.target.value as CatType)}
+              onChange={(e) => handleCatTypeChange(e.target.value)}
               className="form-select"
               required
             >
-              {CAT_TYPES.map((type) => (
+              {catTypes.map((type) => (
                 <option key={type} value={type}>
                   {type}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Custom Cat Type Input */}
+          {catType === 'Custom...' && (
+            <div className="form-group">
+              <label htmlFor="customCatType" className="form-label">
+                Custom Type *
+              </label>
+              <input
+                id="customCatType"
+                type="text"
+                value={customCatType}
+                onChange={(e) => setCustomCatType(e.target.value)}
+                className="form-input"
+                placeholder="Describe the cat's type..."
+                required
+                maxLength={100}
+              />
+            </div>
+          )}
 
           {/* Behavior */}
           <div className="form-group">
@@ -358,7 +515,7 @@ export function EncounterForm({
               className="form-select"
               required
             >
-              {BEHAVIOR_PRESETS.map((preset) => (
+              {behaviorPresets.map((preset) => (
                 <option key={preset} value={preset}>
                   {preset}
                 </option>

@@ -37,6 +37,7 @@ describe('CatEncounter Model', () => {
       lng: -74.0060,
       dateTime: '2024-01-15T10:30:00.000Z',
       catColor: 'Black',
+      coatLength: 'Shorthair',
       catType: 'Domestic Shorthair',
       behavior: 'Friendly',
       comment: 'A friendly black cat',
@@ -58,6 +59,7 @@ describe('CatEncounter Model', () => {
         lng: -74.0060,
         dateTime: '2024-01-15T10:30:00.000Z',
         catColor: 'Black',
+        coatLength: 'Shorthair',
         catType: 'Domestic Shorthair',
         behavior: 'Friendly',
         createdAt: '2024-01-15T10:30:00.000Z',
@@ -81,6 +83,7 @@ describe('CatEncounter Model', () => {
       expect(result.errors).toContain('ID is required and must be a string');
       expect(result.errors).toContain('DateTime is required and must be a string');
       expect(result.errors).toContain('Cat color is required');
+      expect(result.errors).toContain('Coat length is required');
       expect(result.errors).toContain('Cat type is required');
       expect(result.errors).toContain('Behavior is required');
       expect(result.errors).toContain('CreatedAt is required and must be a string');
@@ -109,26 +112,24 @@ describe('CatEncounter Model', () => {
       expect(result.errors).toContain('Longitude must be between -180 and 180 degrees');
     });
 
-    it('should reject encounter with invalid cat color', () => {
-      const invalidEncounter = {
+    it('should accept custom cat color', () => {
+      const encounterWithCustomColor = {
         ...validEncounter,
-        catColor: 'Purple' // Invalid color
+        catColor: 'Purple' // Custom color
       };
 
-      const result = validateCatEncounter(invalidEncounter);
-      expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(`Cat color must be one of: ${CAT_COLORS.join(', ')}`);
+      const result = validateCatEncounter(encounterWithCustomColor);
+      expect(result.isValid).toBe(true);
     });
 
-    it('should reject encounter with invalid cat type', () => {
-      const invalidEncounter = {
+    it('should accept custom cat type', () => {
+      const encounterWithCustomType = {
         ...validEncounter,
-        catType: 'Robot Cat' // Invalid type
+        catType: 'Robot Cat' // Custom type
       };
 
-      const result = validateCatEncounter(invalidEncounter);
-      expect(result.isValid).toBe(false);
-      expect(result.errors).toContain(`Cat type must be one of: ${CAT_TYPES.join(', ')}`);
+      const result = validateCatEncounter(encounterWithCustomType);
+      expect(result.isValid).toBe(true);
     });
 
     it('should reject encounter with empty behavior', () => {
@@ -139,7 +140,7 @@ describe('CatEncounter Model', () => {
 
       const result = validateCatEncounter(invalidEncounter);
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Behavior cannot be empty');
+      expect(result.errors).toContain('Behavior is required');
     });
 
     it('should reject encounter with invalid ISO timestamp', () => {
@@ -160,7 +161,7 @@ describe('CatEncounter Model', () => {
         photoBlobId: true // Should be string
       };
 
-      const result = validateCatEncounter(invalidEncounter);
+      const result = validateCatEncounter(invalidEncounter as any);
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Comment must be a string if provided');
       expect(result.errors).toContain('PhotoBlobId must be a string if provided');
@@ -173,6 +174,7 @@ describe('CatEncounter Model', () => {
         40.7128,
         -74.0060,
         'Black',
+        'Shorthair',
         'Domestic Shorthair',
         'Friendly'
       );
@@ -181,6 +183,7 @@ describe('CatEncounter Model', () => {
       expect(encounter.lat).toBe(40.7128);
       expect(encounter.lng).toBe(-74.0060);
       expect(encounter.catColor).toBe('Black');
+      expect(encounter.coatLength).toBe('Shorthair');
       expect(encounter.catType).toBe('Domestic Shorthair');
       expect(encounter.behavior).toBe('Friendly');
       expect(encounter.dateTime).toBe('2024-01-15T10:30:00.000Z');
@@ -195,6 +198,7 @@ describe('CatEncounter Model', () => {
         40.7128,
         -74.0060,
         'Black',
+        'Shorthair',
         'Domestic Shorthair',
         'Friendly',
         {
@@ -210,7 +214,7 @@ describe('CatEncounter Model', () => {
     });
 
     it('should call generateUUID and getCurrentTimestamp', () => {
-      createCatEncounter(40.7128, -74.0060, 'Black', 'Domestic Shorthair', 'Friendly');
+      createCatEncounter(40.7128, -74.0060, 'Black', 'Shorthair', 'Domestic Shorthair', 'Friendly');
 
       expect(dataUtils.generateUUID).toHaveBeenCalledOnce();
       expect(dataUtils.getCurrentTimestamp).toHaveBeenCalledTimes(2); // createdAt and updatedAt
@@ -289,31 +293,23 @@ describe('CatEncounter Model', () => {
     });
 
     describe('isValidCatColor', () => {
-      it('should validate predefined cat colors', () => {
+      it('should validate non-empty strings', () => {
         expect(isValidCatColor('Black')).toBe(true);
-        expect(isValidCatColor('White')).toBe(true);
-        expect(isValidCatColor('Orange/Ginger')).toBe(true);
-        expect(isValidCatColor('Mixed/Other')).toBe(true);
+        expect(isValidCatColor('Purple')).toBe(true);
       });
 
-      it('should reject invalid cat colors', () => {
-        expect(isValidCatColor('Purple')).toBe(false);
-        expect(isValidCatColor('black')).toBe(false); // Case sensitive
+      it('should reject empty or invalid cat colors', () => {
         expect(isValidCatColor('')).toBe(false);
       });
     });
 
     describe('isValidCatType', () => {
-      it('should validate predefined cat types', () => {
+      it('should validate non-empty strings', () => {
         expect(isValidCatType('Domestic Shorthair')).toBe(true);
-        expect(isValidCatType('Stray')).toBe(true);
-        expect(isValidCatType('Kitten')).toBe(true);
-        expect(isValidCatType('Unknown')).toBe(true);
+        expect(isValidCatType('Robot Cat')).toBe(true);
       });
 
-      it('should reject invalid cat types', () => {
-        expect(isValidCatType('Robot Cat')).toBe(false);
-        expect(isValidCatType('domestic shorthair')).toBe(false); // Case sensitive
+      it('should reject empty or invalid cat types', () => {
         expect(isValidCatType('')).toBe(false);
       });
     });
@@ -339,6 +335,7 @@ describe('CatEncounter Model', () => {
       expect(CAT_COLORS).toContain('White');
       expect(CAT_COLORS).toContain('Orange/Ginger');
       expect(CAT_COLORS).toContain('Mixed/Other');
+      expect(CAT_COLORS).toContain('Custom...');
       expect(CAT_COLORS.length).toBeGreaterThan(5);
     });
 
@@ -347,6 +344,7 @@ describe('CatEncounter Model', () => {
       expect(CAT_TYPES).toContain('Stray');
       expect(CAT_TYPES).toContain('Kitten');
       expect(CAT_TYPES).toContain('Unknown');
+      expect(CAT_TYPES).toContain('Custom...');
       expect(CAT_TYPES.length).toBeGreaterThan(5);
     });
 

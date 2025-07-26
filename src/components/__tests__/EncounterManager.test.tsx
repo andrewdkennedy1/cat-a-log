@@ -15,9 +15,25 @@ vi.mock('../../services/StorageService', () => ({
     getEncounters: vi.fn(),
     saveEncounter: vi.fn(),
     deleteEncounter: vi.fn(),
-    getPhoto: vi.fn()
+    getPhoto: vi.fn(),
+    exportData: vi.fn(),
+    importData: vi.fn()
   }
 }));
+
+const mockEncounter: CatEncounter = {
+  id: 'test-id',
+  lat: 40.7128,
+  lng: -74.0060,
+  dateTime: '2024-01-15T10:30:00.000Z',
+  catColor: 'Orange',
+  coatLength: 'Shorthair',
+  catType: 'Tabby',
+  behavior: 'Friendly',
+  comment: 'Very cute cat!',
+  createdAt: '2024-01-15T10:30:00.000Z',
+  updatedAt: '2024-01-15T10:30:00.000Z'
+};
 
 // Mock Leaflet
 vi.mock('leaflet', () => ({
@@ -66,19 +82,6 @@ const renderWithProviders = (ui: React.ReactElement) => {
 };
 
 describe('EncounterManager Integration', () => {
-  const mockEncounter: CatEncounter = {
-    id: 'test-id',
-    lat: 40.7128,
-    lng: -74.0060,
-    dateTime: '2024-01-15T10:30:00.000Z',
-    catColor: 'Orange',
-    catType: 'Tabby',
-    behavior: 'Friendly',
-    comment: 'Very cute cat!',
-    createdAt: '2024-01-15T10:30:00.000Z',
-    updatedAt: '2024-01-15T10:30:00.000Z'
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockStorageService.getEncounters.mockResolvedValue([mockEncounter]);
@@ -241,13 +244,3 @@ vi.mock('../DataManagement', () => ({
     </div>
   )
 }));
-    renderWithProviders(<EncounterManager />);
-    
-    // Should load encounters on mount
-    await waitFor(() => {
-      expect(mockStorageService.getEncounters).toHaveBeenCalled();
-    });
-    
-    // Should show the add cat button
-    expect(screen.getByTitle('Log Cat Encounter')).toBeInTheDocument();
-  });

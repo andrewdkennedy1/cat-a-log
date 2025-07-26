@@ -9,6 +9,7 @@ export interface CatEncounter {
   lng: number;             // Longitude coordinate
   dateTime: string;        // ISO-8601 timestamp
   catColor: string;        // Standardized color value
+  coatLength: string;      // Standardized coat length value
   catType: string;         // Standardized type value
   behavior: string;        // Preset or custom behavior
   comment?: string;        // Optional user comment
@@ -31,6 +32,10 @@ export interface UserPreferences {
   autoSync: boolean;
   photoQuality: 'low' | 'medium' | 'high';
   theme: 'light' | 'dark' | 'auto';
+  customCatColors: string[];
+  customCoatLengths: string[];
+  customCatTypes: string[];
+  customBehaviors: string[];
 }
 
 // Sync metadata for conflict resolution
