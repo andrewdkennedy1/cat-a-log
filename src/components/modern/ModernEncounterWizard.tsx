@@ -321,22 +321,24 @@ export function ModernEncounterWizard({
     };
     
     return (
-      <div className="p-0 h-full flex flex-col gap-4">
-        <div className="p-4">
+      <div className="h-full flex flex-col">
+        <div className="p-4 flex-shrink-0">
           <Label>{title} *</Label>
            <p className="text-sm text-muted-foreground">Adding a new record will make it chooseable in the future. Built-in options cannot be edited or deleted.</p>
         </div>
-        <ModernSelectableList
-          options={options[optionsKey]}
-          value={formData[type]}
-          onChange={(v) => setFormData(p => ({ ...p, [type]: v }))}
-          onAdd={() => openAddOptionDialog(type)}
-          onEdit={(v) => openEditOptionDialog(type, v)}
-          onDelete={(v) => handleDeleteOption(type, v)}
-          placeholder={`Search ${title.toLowerCase()}...`}
-          builtInOptions={getBuiltInOptions(type)}
-        />
-        <div className="p-4 mt-auto flex justify-between">
+        <div className="flex-1 min-h-0">
+          <ModernSelectableList
+            options={options[optionsKey]}
+            value={formData[type]}
+            onChange={(v) => setFormData(p => ({ ...p, [type]: v }))}
+            onAdd={() => openAddOptionDialog(type)}
+            onEdit={(v) => openEditOptionDialog(type, v)}
+            onDelete={(v) => handleDeleteOption(type, v)}
+            placeholder={`Search ${title.toLowerCase()}...`}
+            builtInOptions={getBuiltInOptions(type)}
+          />
+        </div>
+        <div className="p-4 flex-shrink-0 border-t bg-background flex justify-between">
           <Button type="button" variant="outline" onClick={back}><ArrowLeft className="h-4 w-4 mr-2"/>Back</Button>
           <Button type="button" onClick={next} disabled={!isValidStep()}>Next<ArrowRight className="h-4 w-4 ml-2"/></Button>
         </div>
@@ -348,7 +350,7 @@ export function ModernEncounterWizard({
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
         <DialogContent 
-          className="max-w-full h-full flex flex-col p-0"
+          className="max-w-full h-full flex flex-col p-0 [&>button]:hidden"
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >
@@ -372,11 +374,16 @@ export function ModernEncounterWizard({
           <div className="relative flex-1 overflow-hidden">
             <div className="h-full">
               <div className={stepClasses(0)}>
-                <div className="p-4 h-full flex flex-col gap-4">
-                  <h2 className="text-lg flex items-center gap-2"><Camera className="h-5 w-5"/>Photo</h2>
-                  <ModernPhotoInput value={formData.photo} onChange={handlePhotoChange} disabled={isSubmitting} />
-                  <div className="mt-auto flex justify-between">
-                    <Button type="button" onClick={next} className="ml-auto">
+                <div className="h-full flex flex-col">
+                  <div className="p-4 flex-shrink-0">
+                    <h2 className="text-lg flex items-center gap-2"><Camera className="h-5 w-5"/>Photo</h2>
+                  </div>
+                  <div className="flex-1 min-h-0 p-4 pt-0">
+                    <ModernPhotoInput value={formData.photo} onChange={handlePhotoChange} disabled={isSubmitting} />
+                  </div>
+                  <div className="p-4 flex-shrink-0 border-t bg-background flex justify-between">
+                    <div></div>
+                    <Button type="button" onClick={next}>
                       Next <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </div>
@@ -400,16 +407,20 @@ export function ModernEncounterWizard({
               </div>
 
               <div className={stepClasses(5)}>
-                <div className="p-4 h-full flex flex-col gap-4">
-                  <Label htmlFor="comment">Additional Comments</Label>
-                  <textarea
-                    id="comment"
-                    value={formData.comment}
-                    onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
-                    placeholder="Any additional observations about this cat..."
-                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                  <div className="mt-auto flex justify-between">
+                <div className="h-full flex flex-col">
+                  <div className="p-4 flex-shrink-0">
+                    <Label htmlFor="comment">Additional Comments</Label>
+                  </div>
+                  <div className="flex-1 min-h-0 p-4 pt-0">
+                    <textarea
+                      id="comment"
+                      value={formData.comment}
+                      onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
+                      placeholder="Any additional observations about this cat..."
+                      className="flex h-full w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
+                    />
+                  </div>
+                  <div className="p-4 flex-shrink-0 border-t bg-background flex justify-between">
                     <Button type="button" variant="outline" onClick={back}><ArrowLeft className="h-4 w-4 mr-2"/>Back</Button>
                     <Button type="button" onClick={handleSubmit} disabled={isSubmitting} className="bg-primary text-primary-foreground">
                       <Save className="h-4 w-4 mr-2" />

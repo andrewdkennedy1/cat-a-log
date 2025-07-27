@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Edit } from 'lucide-react';
+import { Plus, Trash2, Edit, GripVertical } from 'lucide-react';
 
 interface ModernSelectableListProps {
   options: string[];
@@ -47,6 +47,10 @@ export function ModernSelectableList({
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full"
         />
+        {/* Mobile drag hint */}
+        <p className="text-xs text-muted-foreground mt-2 md:hidden">
+          💡 Swipe left on custom options to edit or delete
+        </p>
       </div>
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-1 p-2">
@@ -131,7 +135,9 @@ export function ModernSelectableList({
                       onChange(option);
                     }
                   }}
-                  className="relative bg-background"
+                  className={`relative bg-background transition-shadow ${
+                    draggedOption === option ? 'shadow-lg' : ''
+                  } ${canEdit ? 'md:cursor-pointer' : 'cursor-pointer'}`}
                   style={{
                     zIndex: draggedOption === option ? 20 : 10
                   }}
@@ -146,11 +152,18 @@ export function ModernSelectableList({
                       onChange(option);
                     }}
                   >
-                    <span className="flex items-center gap-2">
-                      {option}
-                      {isBuiltIn(option) && (
-                        <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          Built-in
+                    <span className="flex items-center gap-2 w-full">
+                      <span className="flex items-center gap-2 flex-1">
+                        {option}
+                        {isBuiltIn(option) && (
+                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            Built-in
+                          </span>
+                        )}
+                      </span>
+                      {canEdit && (
+                        <span className="flex items-center md:hidden text-muted-foreground opacity-60">
+                          <GripVertical className="h-4 w-4" />
                         </span>
                       )}
                     </span>
