@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-import { ModernEncounterForm } from './ModernEncounterForm';
+import { ModernEncounterWizard } from './ModernEncounterWizard';
 import { ModernSettings } from './ModernSettings';
 import { ModernEncounterCard } from './ModernEncounterCard';
 import { ModernBottomNav } from './ModernBottomNav';
@@ -319,7 +319,7 @@ export function ModernApp() {
       />
 
       {/* Dialogs - Outside main container to ensure proper z-index */}
-      <ModernEncounterForm
+      <ModernEncounterWizard
         isOpen={isFormOpen}
         initialData={editingEncounter}
         location={formLocation}
