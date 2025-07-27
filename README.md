@@ -1,6 +1,6 @@
 # CAT-a-log
 
-CAT-a-log is a web application for logging and tracking cat encounters, available at [log.catcafe.com](https://log.catcafe.com).
+CAT-a-log is a web application for logging and tracking cat encounters, available at [log.catcafe.space](https://log.catcafe.space).
 
 ## Features
 
