@@ -201,6 +201,24 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <div className="p-4 border rounded-lg bg-background">
+              <div className="space-y-2">
+                <h4 className="font-medium">Reset Welcome Screen</h4>
+                <p className="text-sm text-muted-foreground">
+                  Show the welcome screen on the next app load.
+                </p>
+                <Button
+                  onClick={() => {
+                    localStorage.removeItem('hasSeenWelcome');
+                    window.location.reload();
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  Reset
+                </Button>
+              </div>
+            </div>
             <div className="p-4 border border-destructive/20 rounded-lg bg-destructive/5">
               <div className="space-y-2">
                 <h4 className="font-medium text-destructive">Clear All Data</h4>

@@ -13,6 +13,7 @@ import { ModernSettings } from './ModernSettings';
 import { ModernEncounterCard } from './ModernEncounterCard';
 import { ModernBottomNav } from './ModernBottomNav';
 import { Map } from '@/components/Map';
+import WelcomeModal from './WelcomeModal';
 import { useEncounters } from '@/hooks/useEncounters';
 import { useUI } from '@/hooks/useUI';
 import { useUser } from '@/hooks/useUser';
@@ -46,6 +47,7 @@ export function ModernApp() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'grid'>('map');
   const [isSelectLocationPromptOpen, setIsSelectLocationPromptOpen] = useState(false);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [searchTerm] = useState('');
   const [filteredEncounters, setFilteredEncounters] = useState<CatEncounter[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
@@ -55,6 +57,13 @@ export function ModernApp() {
     // We only want this to run once on startup.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     restoreGoogleToken();
+  }, []);
+
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+    if (!hasSeenWelcome) {
+      setIsWelcomeModalOpen(true);
+    }
   }, []);
 
   // Removed periodic check to prevent log flooding
@@ -175,6 +184,11 @@ export function ModernApp() {
     closeForm();
     setEditingEncounter(undefined);
     setFormLocation(undefined);
+  };
+
+  const handleDismissWelcomeModal = () => {
+    localStorage.setItem('hasSeenWelcome', 'true');
+    setIsWelcomeModalOpen(false);
   };
 
 
@@ -360,6 +374,11 @@ export function ModernApp() {
           <p>Please click or long-press on the map to select the location for the new encounter.</p>
         </DialogContent>
       </Dialog>
+
+      <WelcomeModal
+        isOpen={isWelcomeModalOpen}
+        onDismiss={handleDismissWelcomeModal}
+      />
     </div>
   );
 }
