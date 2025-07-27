@@ -53,7 +53,7 @@ const createPawIcon = (color: string, isSelected: boolean = false) => {
       </g>
     </svg>
   `;
-  
+
   return L.divIcon({
     html: pawSvg,
     className: 'paw-marker',
@@ -68,14 +68,14 @@ const createUserLocationIcon = (accuracy?: number) => {
   const isHighAccuracy = accuracy && accuracy <= 50;
   const color = isHighAccuracy ? '#4285f4' : '#ffa500';
   const size = 16;
-  
+
   const locationSvg = `
     <svg width="${size}" height="${size}" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12" cy="12" r="8" fill="${color}" stroke="#fff" stroke-width="3"/>
       <circle cx="12" cy="12" r="3" fill="#fff"/>
     </svg>
   `;
-  
+
   return L.divIcon({
     html: locationSvg,
     className: 'user-location-marker',
@@ -149,12 +149,12 @@ export const Map: FC<ExtendedMapProps> = ({
       if (!blob) return;
       // Create object URL for the blob
       const photoUrl = URL.createObjectURL(blob);
-      
+
       setPhotoUrls(prev => ({
         ...prev,
         [encounter.photoBlobId!]: photoUrl
       }));
-      
+
       // Cleanup URL when component unmounts or photo changes
       return () => {
         URL.revokeObjectURL(photoUrl);
@@ -352,8 +352,8 @@ export const Map: FC<ExtendedMapProps> = ({
     const accuracyText = usingIpGeolocation
       ? 'Your location (IP based)'
       : accuracy
-      ? `Your location (±${Math.round(accuracy)}m)`
-      : 'Your location';
+        ? `Your location (±${Math.round(accuracy)}m)`
+        : 'Your location';
 
     userMarker.bindTooltip(accuracyText, {
       permanent: false,
@@ -483,8 +483,8 @@ export const Map: FC<ExtendedMapProps> = ({
       // Remove the functions from the window object when the component unmounts
       // to prevent memory leaks and unexpected behavior.
       // No-op assignments are a safe way to handle this.
-      window.editEncounter = () => {};
-      window.deleteEncounter = () => {};
+      window.editEncounter = () => { };
+      window.deleteEncounter = () => { };
     };
   }, [encounters, handleEncounterEdit, handleEncounterDelete]);
 
@@ -500,7 +500,7 @@ export const Map: FC<ExtendedMapProps> = ({
   return (
     <div style={{ height: '100%', width: '100%', position: 'relative' }}>
       <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
-      
+
       {/* GPS Status Indicator for Mobile */}
       {isMobile && (
         <div
@@ -521,13 +521,13 @@ export const Map: FC<ExtendedMapProps> = ({
           {usingIpGeolocation && '📍 Using approximate location'}
         </div>
       )}
-      
+
       {/* Location Button */}
-      <LocationButton 
+      <LocationButton
         onLocationFound={handleLocationFound}
         className="map-location-button"
       />
-      
+
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={deleteDialogOpen}

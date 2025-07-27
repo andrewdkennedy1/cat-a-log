@@ -80,18 +80,11 @@ export function ModernEncounterForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check if form is valid
-  const checkFieldValidity = (field: keyof typeof showCustom) => {
-    if (showCustom[field]) {
-      return customFields[field].trim() !== '';
-    }
-    return !!formData[field as keyof typeof formData];
-  };
-
-  const isValid =
-    checkFieldValidity('catColor') &&
-    checkFieldValidity('coatLength') &&
-    checkFieldValidity('catType') &&
-    checkFieldValidity('behavior');
+  const isValid = 
+    (formData.catColor || (showCustom.catColor && customFields.catColor.trim())) &&
+    (formData.coatLength || (showCustom.coatLength && customFields.coatLength.trim())) &&
+    (formData.catType || (showCustom.catType && customFields.catType.trim())) &&
+    (formData.behavior || (showCustom.behavior && customFields.behavior.trim()));
 
   useEffect(() => {
     if (initialData) {
@@ -131,55 +124,50 @@ export function ModernEncounterForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const finalData = { ...formData };
-    const fields: ('catColor' | 'coatLength' | 'catType' | 'behavior')[] = ['catColor', 'coatLength', 'catType', 'behavior'];
-
-    for (const field of fields) {
-      if (showCustom[field]) {
-        const customValue = customFields[field].trim();
-        if (customValue) {
-          finalData[field] = customValue;
-          await storageService.addCustomOption(field, customValue);
-        }
-      }
-    }
-
-    if (!finalData.catColor || !finalData.coatLength || !finalData.catType || !finalData.behavior) {
-      return;
-    }
-
-    // For new encounters, require either a location or default to a placeholder
-    if (!location && !initialData?.lat) {
-      // Could show an error message or use default coordinates
-      console.warn('No location provided for new encounter');
-      return;
-    }
+    if (!isValid) return;
 
     setIsSubmitting(true);
 
     try {
+      // Get final values (either from form data or custom fields)
+      const catColor = showCustom.catColor ? customFields.catColor.trim() : formData.catColor;
+      const coatLength = showCustom.coatLength ? customFields.coatLength.trim() : formData.coatLength;
+      const catType = showCustom.catType ? customFields.catType.trim() : formData.catType;
+      const behavior = showCustom.behavior ? customFields.behavior.trim() : formData.behavior;
+
+      // Save custom options for future use
+      if (showCustom.catColor && customFields.catColor.trim()) {
+        await storageService.addCustomOption('catColor', customFields.catColor.trim());
+      }
+      if (showCustom.coatLength && customFields.coatLength.trim()) {
+        await storageService.addCustomOption('coatLength', customFields.coatLength.trim());
+      }
+      if (showCustom.catType && customFields.catType.trim()) {
+        await storageService.addCustomOption('catType', customFields.catType.trim());
+      }
+      if (showCustom.behavior && customFields.behavior.trim()) {
+        await storageService.addCustomOption('behavior', customFields.behavior.trim());
+      }
+
       const now = new Date().toISOString();
-      
       let photoBlobId = initialData?.photoBlobId;
 
       if (formData.photo) {
-        // If there's an old photo, delete it
         if (photoBlobId) {
           await storageService.deletePhoto(photoBlobId);
         }
-        // Save the new photo
         photoBlobId = await storageService.savePhoto(formData.photo);
       }
 
       const encounter: CatEncounter = {
         id: initialData?.id || uuidv4(),
-        lat: location?.lat ?? initialData?.lat ?? 0, // Default to 0,0 if no location
+        lat: location?.lat ?? initialData?.lat ?? 0,
         lng: location?.lng ?? initialData?.lng ?? 0,
         dateTime: initialData?.dateTime || now,
-        catColor: finalData.catColor,
-        coatLength: finalData.coatLength,
-        catType: finalData.catType,
-        behavior: finalData.behavior,
+        catColor,
+        coatLength,
+        catType,
+        behavior,
         comment: formData.comment || undefined,
         photoBlobId,
         createdAt: initialData?.createdAt || now,
@@ -250,16 +238,19 @@ export function ModernEncounterForm({
                         <SelectValue placeholder="Select cat color" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border border-border shadow-lg">
-                        {customOptions.catColor.map(color => (
-                          <SelectItem key={color} value={color} className="bg-background hover:bg-accent focus:bg-accent">
-                            <span className="capitalize">{color}</span>
-                          </SelectItem>
-                        ))}
                         {CAT_COLORS.map(color => (
                           <SelectItem key={color} value={color} className="bg-background hover:bg-accent focus:bg-accent">
                             <span className="capitalize">{color}</span>
                           </SelectItem>
                         ))}
+                        {customOptions.catColor.map(color => (
+                          <SelectItem key={color} value={color} className="bg-background hover:bg-accent focus:bg-accent">
+                            <span className="capitalize">{color}</span>
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="Custom..." className="bg-background hover:bg-accent focus:bg-accent">
+                          Custom...
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     {showCustom.catColor && (
@@ -279,16 +270,19 @@ export function ModernEncounterForm({
                         <SelectValue placeholder="Select coat length" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border border-border shadow-lg">
-                        {customOptions.coatLength.map(length => (
-                          <SelectItem key={length} value={length} className="bg-background hover:bg-accent focus:bg-accent">
-                            <span className="capitalize">{length}</span>
-                          </SelectItem>
-                        ))}
                         {COAT_LENGTHS.map(length => (
                           <SelectItem key={length} value={length} className="bg-background hover:bg-accent focus:bg-accent">
                             <span className="capitalize">{length}</span>
                           </SelectItem>
                         ))}
+                        {customOptions.coatLength.map(length => (
+                          <SelectItem key={length} value={length} className="bg-background hover:bg-accent focus:bg-accent">
+                            <span className="capitalize">{length}</span>
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="Custom..." className="bg-background hover:bg-accent focus:bg-accent">
+                          Custom...
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     {showCustom.coatLength && (
@@ -308,16 +302,19 @@ export function ModernEncounterForm({
                         <SelectValue placeholder="Select cat type" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border border-border shadow-lg">
-                        {customOptions.catType.map(type => (
-                          <SelectItem key={type} value={type} className="bg-background hover:bg-accent focus:bg-accent">
-                            <span className="capitalize">{type}</span>
-                          </SelectItem>
-                        ))}
                         {CAT_TYPES.map(type => (
                           <SelectItem key={type} value={type} className="bg-background hover:bg-accent focus:bg-accent">
                             <span className="capitalize">{type}</span>
                           </SelectItem>
                         ))}
+                        {customOptions.catType.map(type => (
+                          <SelectItem key={type} value={type} className="bg-background hover:bg-accent focus:bg-accent">
+                            <span className="capitalize">{type}</span>
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="Custom..." className="bg-background hover:bg-accent focus:bg-accent">
+                          Custom...
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     {showCustom.catType && (
@@ -337,16 +334,19 @@ export function ModernEncounterForm({
                         <SelectValue placeholder="Select behavior" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border border-border shadow-lg">
-                        {customOptions.behavior.map(behavior => (
-                          <SelectItem key={behavior} value={behavior} className="bg-background hover:bg-accent focus:bg-accent">
-                            <span className="capitalize">{behavior}</span>
-                          </SelectItem>
-                        ))}
                         {BEHAVIOR_PRESETS.map(behavior => (
                           <SelectItem key={behavior} value={behavior} className="bg-background hover:bg-accent focus:bg-accent">
                             <span className="capitalize">{behavior}</span>
                           </SelectItem>
                         ))}
+                        {customOptions.behavior.map(behavior => (
+                          <SelectItem key={behavior} value={behavior} className="bg-background hover:bg-accent focus:bg-accent">
+                            <span className="capitalize">{behavior}</span>
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="Custom..." className="bg-background hover:bg-accent focus:bg-accent">
+                          Custom...
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     {showCustom.behavior && (

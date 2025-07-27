@@ -5,7 +5,8 @@
 import { renderHook, act } from '@testing-library/react';
 import React, { ReactNode } from 'react';
 import { vi, describe, it, expect } from 'vitest';
-import { AppProvider, useAppContext } from '../AppContext';
+import { AppProvider } from '../AppContext';
+import { useAppContext } from '../../hooks/useAppContext';
 import type { CatEncounter, UserPreferences } from '../../types';
 
 // Test wrapper component

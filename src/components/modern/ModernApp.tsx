@@ -39,7 +39,7 @@ export function ModernApp() {
     selectEncounter
   } = useUI();
 
-  const { preferences } = useUser();
+  const { preferences, restoreGoogleToken } = useUser();
 
   const [formLocation, setFormLocation] = useState<{ lat: number; lng: number } | undefined>();
   const [editingEncounter, setEditingEncounter] = useState<CatEncounter | undefined>();
@@ -48,6 +48,28 @@ export function ModernApp() {
   const [searchTerm] = useState('');
   const [filteredEncounters, setFilteredEncounters] = useState<CatEncounter[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+
+  // Restore Google token on app startup with proper timing
+  useEffect(() => {
+    let isRestoring = false;
+    
+    const restoreToken = async () => {
+      if (isRestoring) return; // Prevent multiple restoration attempts
+      isRestoring = true;
+      
+      // Simple delay to let APIs load, then attempt restoration
+      setTimeout(() => {
+        console.log('Attempting Google token restoration...');
+        restoreGoogleToken().finally(() => {
+          isRestoring = false;
+        });
+      }, 2000); // 2 second delay
+    };
+
+    restoreToken();
+  }, [restoreGoogleToken]);
+
+  // Removed periodic check to prevent log flooding
 
   // Load photo thumbnails
   useEffect(() => {

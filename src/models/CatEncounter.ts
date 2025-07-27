@@ -7,26 +7,22 @@ import { generateUUID, getCurrentTimestamp } from '../utils/dataUtils';
 
 // Standardized cat colors
 export const CAT_COLORS = [
-  'Mixed/Other',
-  'Custom...'
+  'Mixed/Other'
 ] as const;
 
 // Standardized coat lengths
 export const COAT_LENGTHS = [
-  'Shorthair',
-  'Custom...'
+  'Shorthair'
 ] as const;
 
 // Standardized cat types
 export const CAT_TYPES = [
-  'Unknown',
-  'Custom...'
+  'Unknown'
 ] as const;
 
 // Behavior presets
 export const BEHAVIOR_PRESETS = [
-  'Curious',
-  'Custom...'
+  'Curious'
 ] as const;
 
 export type CatColor = typeof CAT_COLORS[number];

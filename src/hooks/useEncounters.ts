@@ -3,8 +3,9 @@
  */
 
 import { useCallback } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext } from './useAppContext';
 import type { CatEncounter } from '../types';
+import { syncService } from '@/services/SyncService';
 
 export function useEncounters() {
   const { state, dispatch } = useAppContext();
@@ -20,16 +21,21 @@ export function useEncounters() {
   // Add new encounter
   const addEncounter = useCallback((encounter: CatEncounter) => {
     dispatch({ type: 'ADD_ENCOUNTER', payload: encounter });
+    // Sync to cloud if authenticated
+    syncService.syncEncounter();
   }, [dispatch]);
 
   // Update existing encounter
   const updateEncounter = useCallback((id: string, updates: Partial<CatEncounter>) => {
     dispatch({ type: 'UPDATE_ENCOUNTER', payload: { id, updates } });
+    // Sync to cloud if authenticated
+    syncService.syncEncounter();
   }, [dispatch]);
 
   // Delete encounter
   const deleteEncounter = useCallback((id: string) => {
     dispatch({ type: 'DELETE_ENCOUNTER', payload: id });
+    // Sync will happen automatically on next sync cycle
   }, [dispatch]);
 
   // Set all encounters (for initial load or sync)
@@ -62,7 +68,7 @@ export function useEncounters() {
 
   // Get encounters sorted by date (newest first)
   const getEncountersSortedByDate = useCallback((): CatEncounter[] => {
-    return [...encounters].sort((a, b) => 
+    return [...encounters].sort((a, b) =>
       new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()
     );
   }, [encounters]);

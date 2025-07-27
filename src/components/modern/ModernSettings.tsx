@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { Palette, Cloud, Download, Upload, Smartphone, Monitor, Sun, Moon, Trash2 } from 'lucide-react';
+import { Palette, Cloud, Download, Upload, Smartphone, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -25,10 +25,6 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
   const { isAuthenticated, hasGoogleToken } = useUser();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleThemeChange = (theme: 'light' | 'dark' | 'auto') => {
-    onPreferencesChange({ theme });
-  };
-
   const handlePhotoQualityChange = (quality: 'low' | 'medium' | 'high') => {
     onPreferencesChange({ photoQuality: quality });
   };
@@ -41,10 +37,8 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
     setIsLoading(true);
     try {
       await syncService.sync();
-      // Show success message
     } catch (error) {
       console.error('Sync failed:', error);
-      // Show error message
     } finally {
       setIsLoading(false);
     }
@@ -57,11 +51,13 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
 
     setIsLoading(true);
     try {
-      await syncService.restore();
-      // Show success message
+      const encounters = await syncService.restore();
+      // Refresh the page to show restored data
+      if (encounters.length > 0) {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Restore failed:', error);
-      // Show error message
     } finally {
       setIsLoading(false);
     }
@@ -85,13 +81,7 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
     }
   };
 
-  const getThemeIcon = (theme: string) => {
-    switch (theme) {
-      case 'light': return <Sun className="h-4 w-4" />;
-      case 'dark': return <Moon className="h-4 w-4" />;
-      default: return <Monitor className="h-4 w-4" />;
-    }
-  };
+
 
   return (
     <div className="space-y-6">
@@ -107,40 +97,6 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="theme">Theme</Label>
-            <Select value={preferences.theme} onValueChange={handleThemeChange}>
-              <SelectTrigger>
-                <SelectValue>
-                  <div className="flex items-center gap-2">
-                    {getThemeIcon(preferences.theme)}
-                    <span className="capitalize">{preferences.theme}</span>
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="auto">
-                  <div className="flex items-center gap-2">
-                    <Monitor className="h-4 w-4" />
-                    Auto
-                  </div>
-                </SelectItem>
-                <SelectItem value="light">
-                  <div className="flex items-center gap-2">
-                    <Sun className="h-4 w-4" />
-                    Light
-                  </div>
-                </SelectItem>
-                <SelectItem value="dark">
-                  <div className="flex items-center gap-2">
-                    <Moon className="h-4 w-4" />
-                    Dark
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="photoQuality">Photo Quality</Label>
             <Select value={preferences.photoQuality} onValueChange={handlePhotoQualityChange}>
@@ -213,37 +169,7 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
         </CardContent>
       </Card>
 
-      {/* Mobile Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Smartphone className="h-5 w-5" />
-            Mobile Settings
-          </CardTitle>
-          <CardDescription>
-            Settings specific to mobile usage
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Default Map Zoom</Label>
-            <Select 
-              value={preferences.defaultMapZoom.toString()} 
-              onValueChange={(value) => onPreferencesChange({ defaultMapZoom: parseInt(value) })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">City Level (10)</SelectItem>
-                <SelectItem value="13">Neighborhood (13)</SelectItem>
-                <SelectItem value="15">Street Level (15)</SelectItem>
-                <SelectItem value="17">Building Level (17)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* PWA Install */}
       <Card>

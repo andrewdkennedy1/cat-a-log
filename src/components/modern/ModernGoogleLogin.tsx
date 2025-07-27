@@ -12,34 +12,66 @@ import { GoogleDriveService } from '@/services/GoogleDriveService';
 
 export function ModernGoogleLogin() {
   const [isLoading, setIsLoading] = useState(false);
-  const { isAuthenticated, setAuthenticated, setGoogleToken, logout, initializeGoogleDrive, googleToken } = useUser();
+  const [isLogoutLoading, setIsLogoutLoading] = useState(false);
+  const { isAuthenticated, setAuthenticated, setGoogleToken, logout, initializeGoogleDrive, googleToken, hasGoogleDriveService } = useUser();
   const { showSnackbar } = useSnackbar();
 
   const handleLogin = async () => {
     setIsLoading(true);
     try {
+      console.log('Starting Google authentication...');
       const token = await GoogleDriveService.authenticate();
+      console.log('Google authentication successful, token received');
+      
+      // Set token and authentication state
       setGoogleToken(token);
       setAuthenticated(true);
+      
+      // Initialize Google Drive service
       await initializeGoogleDrive(token);
-    } catch (error) {
+      console.log('Google login flow completed successfully');
+    } catch (error: unknown) {
       console.error('Google login failed:', error);
-      showSnackbar('Google login failed. Please try again.', 'error');
+      
+      // Clear any partial state on failure
+      setGoogleToken(undefined);
+      setAuthenticated(false);
+      
+      let errorMessage = 'Google login failed. Please try again.';
+      if (error instanceof Error && error.message) {
+        if (error.message.includes('failed to load') || error.message.includes('API client failed to load')) {
+          errorMessage = 'Google services are still loading. Please wait a moment and try again.';
+        } else if (error.message.includes('popup_closed_by_user')) {
+          errorMessage = 'Login was cancelled. Please try again if you want to connect to Google Drive.';
+        } else if (error.message.includes('invalid_token') || error.message.includes('unauthorized')) {
+          errorMessage = 'Authentication failed. Please try signing in again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      showSnackbar(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    if (googleToken) {
-      GoogleDriveService.logout(googleToken);
+  const handleLogout = async () => {
+    setIsLogoutLoading(true);
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      showSnackbar('Failed to disconnect from Google Drive', 'error');
+    } finally {
+      setIsLogoutLoading(false);
     }
-    logout();
   };
 
   const isGoogleAuthenticated = !!googleToken;
+  const isFullyAuthenticated = isAuthenticated && isGoogleAuthenticated && hasGoogleDriveService;
 
-  if (isAuthenticated && isGoogleAuthenticated) {
+  if (isFullyAuthenticated) {
     return (
       <Card className="border-green-200 bg-green-50/50">
         <CardContent className="p-4">
@@ -58,9 +90,19 @@ export function ModernGoogleLogin() {
               variant="outline"
               size="sm"
               className="border-green-300 text-green-700 hover:bg-green-100"
+              disabled={isLogoutLoading}
             >
-              <CloudOff className="h-4 w-4 mr-2" />
-              Disconnect
+              {isLogoutLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Disconnecting...
+                </>
+              ) : (
+                <>
+                  <CloudOff className="h-4 w-4 mr-2" />
+                  Disconnect
+                </>
+              )}
             </Button>
           </div>
         </CardContent>

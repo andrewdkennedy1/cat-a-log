@@ -9,7 +9,7 @@ export interface CatEncounter {
   lng: number;             // Longitude coordinate
   dateTime: string;        // ISO-8601 timestamp
   catColor: string;        // Standardized color value
-  coatLength: string;      // Standardized coat length value
+  coatLength?: string;     // Standardized coat length value (optional for backward compatibility)
   catType: string;         // Standardized type value
   behavior: string;        // Preset or custom behavior
   comment?: string;        // Optional user comment

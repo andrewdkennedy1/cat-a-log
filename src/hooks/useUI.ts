@@ -3,7 +3,7 @@
  */
 
 import { useCallback } from 'react';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext } from './useAppContext';
 
 export function useUI() {
   const { state, dispatch } = useAppContext();

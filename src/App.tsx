@@ -6,7 +6,7 @@ import { Snackbar } from './components/Snackbar';
 import './App.css'
 
 function AppContent() {
-  const { snackbar, showSnackbar } = useSnackbar();
+  const { snackbar, showSnackbar, hideSnackbar } = useSnackbar();
 
   return (
     <AppProvider showSnackbar={showSnackbar}>
@@ -15,7 +15,7 @@ function AppContent() {
         <Snackbar
           message={snackbar.message}
           type={snackbar.type}
-          onClose={() => showSnackbar('', 'success')}
+          onClose={hideSnackbar}
         />
       )}
     </AppProvider>

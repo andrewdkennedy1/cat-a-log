@@ -5,7 +5,7 @@
 import { useEncounters } from './useEncounters';
 import { useUI } from './useUI';
 import { useUser } from './useUser';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext } from './useAppContext';
 
 export function useApp() {
   const { state } = useAppContext();
@@ -28,4 +28,4 @@ export function useApp() {
 export { useEncounters } from './useEncounters';
 export { useUI } from './useUI';
 export { useUser } from './useUser';
-export { useAppContext } from '../context/AppContext';
+export { useAppContext } from './useAppContext';

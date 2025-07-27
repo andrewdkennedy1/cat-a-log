@@ -2,31 +2,11 @@
  * Global application state management using React Context and useReducer
  */
 
-import { createContext, useContext, useReducer, useEffect } from 'react';
+import { createContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { CatEncounter, UserPreferences, AppState } from '../types';
+import type { AppState, UserPreferences } from '../types';
 import { storageService } from '../services/StorageService';
-import { GoogleDriveService } from '@/services/GoogleDriveService';
-
-// Action types for the reducer
-export type AppAction =
-  // Encounter actions
-  | { type: 'SET_ENCOUNTERS'; payload: CatEncounter[] }
-  | { type: 'ADD_ENCOUNTER'; payload: CatEncounter }
-  | { type: 'UPDATE_ENCOUNTER'; payload: { id: string; updates: Partial<CatEncounter> } }
-  | { type: 'DELETE_ENCOUNTER'; payload: string }
-  // UI state actions
-  | { type: 'SET_SELECTED_ENCOUNTER'; payload: string | undefined }
-  | { type: 'SET_MAP_CENTER'; payload: [number, number] }
-  | { type: 'SET_MAP_ZOOM'; payload: number }
-  | { type: 'SET_FORM_OPEN'; payload: boolean }
-  | { type: 'SET_SYNC_STATUS'; payload: 'idle' | 'syncing' | 'error' }
-  // User actions
-  | { type: 'SET_AUTHENTICATED'; payload: boolean }
-  | { type: 'SET_GOOGLE_TOKEN'; payload: string | undefined }
-  | { type: 'SET_USER_PREFERENCES'; payload: UserPreferences }
-  | { type: 'UPDATE_USER_PREFERENCES'; payload: Partial<UserPreferences> }
-  | { type: 'SET_GOOGLE_DRIVE_SERVICE'; payload: GoogleDriveService | undefined };
+import type { AppAction } from './AppActions';
 
 // Default user preferences
 const defaultPreferences: UserPreferences = {
@@ -223,7 +203,7 @@ interface AppContextType {
 }
 
 // Create context
-const AppContext = createContext<AppContextType | undefined>(undefined);
+export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Provider component
 interface AppProviderProps {
@@ -248,7 +228,7 @@ export function AppProvider({ children, showSnackbar }: AppProviderProps) {
       }
     };
     loadEncounters();
-  }, [showSnackbar]); // Include showSnackbar dependency
+  }, [showSnackbar]);
 
   // Enhanced dispatch that also saves to storage
   const enhancedDispatch = (action: AppAction) => {
@@ -284,11 +264,3 @@ export function AppProvider({ children, showSnackbar }: AppProviderProps) {
   );
 }
 
-// Hook to use the context
-export function useAppContext() {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
-  }
-  return context;
-}
