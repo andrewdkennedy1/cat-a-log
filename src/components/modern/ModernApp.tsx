@@ -128,8 +128,8 @@ export function ModernApp() {
   const handleLocationSelect = useCallback((lat: number, lng: number) => {
     setFormLocation({ lat, lng });
     setEditingEncounter(undefined);
-    openForm();
     setIsSelectLocationPromptOpen(false);
+    openForm();
   }, [openForm]);
 
   // Handle encounter selection

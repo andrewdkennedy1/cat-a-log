@@ -142,6 +142,12 @@ export interface StorageService {
   // Storage Management
   getStorageUsage(): Promise<{ used: number; quota: number }>;
   clearStorage(): Promise<void>;
+
+  // Custom options management
+  getCustomOptions(field: 'catColor' | 'coatLength' | 'catType' | 'behavior'): Promise<string[]>;
+  addCustomOption(field: 'catColor' | 'coatLength' | 'catType' | 'behavior', value: string): Promise<void>;
+  updateCustomOption(field: 'catColor' | 'coatLength' | 'catType' | 'behavior', oldValue: string, newValue: string): Promise<void>;
+  deleteCustomOption(field: 'catColor' | 'coatLength' | 'catType' | 'behavior', value: string): Promise<void>;
 }
 
 export interface SyncService {

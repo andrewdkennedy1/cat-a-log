@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Cat, Camera, Save, ArrowLeft, ArrowRight, Plus } from 'lucide-react';
+import { Cat, Camera, Save, ArrowLeft, ArrowRight, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ModernPhotoInput } from './ModernPhotoInput';
+import { ModernSelectableList } from './ModernSelectableList';
 import type { CatEncounter } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { storageService } from '@/services/StorageService';
@@ -57,11 +57,46 @@ export function ModernEncounterWizard({
     catTypes: [...CAT_TYPES],
     behaviors: [...BEHAVIOR_PRESETS]
   });
-
+  
   const [isAddOptionOpen, setIsAddOptionOpen] = useState(false);
+  const [isEditOptionOpen, setIsEditOptionOpen] = useState(false);
   const [newOption, setNewOption] = useState('');
+  const [editingOption, setEditingOption] = useState<{ type: OptionType; value: string } | null>(null);
   const [currentOptionType, setCurrentOptionType] = useState<OptionType | null>(null);
   const [lastAddedOption, setLastAddedOption] = useState<{ type: OptionType; value: string } | null>(null);
+
+  // Helper function to get built-in options for a type
+  const getBuiltInOptionsForType = (optionType: OptionType): string[] => {
+    switch (optionType) {
+      case 'catColor':
+        return [...CAT_COLORS];
+      case 'coatLength':
+        return [...COAT_LENGTHS];
+      case 'catType':
+        return [...CAT_TYPES];
+      case 'behavior':
+        return [...BEHAVIOR_PRESETS];
+      default:
+        return [];
+    }
+  };
+
+  const loadOptions = async () => {
+    const [customColors, customLengths, customTypes, customBehaviors] = await Promise.all([
+      storageService.getCustomOptions('catColor'),
+      storageService.getCustomOptions('coatLength'),
+      storageService.getCustomOptions('catType'),
+      storageService.getCustomOptions('behavior')
+    ]);
+
+    setOptions({
+      catColors: [...CAT_COLORS, ...customColors],
+      coatLengths: [...COAT_LENGTHS, ...customLengths],
+      catTypes: [...CAT_TYPES, ...customTypes],
+      behaviors: [...BEHAVIOR_PRESETS, ...customBehaviors]
+    });
+    
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -87,22 +122,6 @@ export function ModernEncounterWizard({
   }, [initialData, isOpen]);
 
   useEffect(() => {
-    const loadOptions = async () => {
-      const [customColors, customLengths, customTypes, customBehaviors] = await Promise.all([
-        storageService.getCustomOptions('catColor'),
-        storageService.getCustomOptions('coatLength'),
-        storageService.getCustomOptions('catType'),
-        storageService.getCustomOptions('behavior')
-      ]);
-
-      setOptions({
-        catColors: [...CAT_COLORS, ...customColors],
-        coatLengths: [...COAT_LENGTHS, ...customLengths],
-        catTypes: [...CAT_TYPES, ...customTypes],
-        behaviors: [...BEHAVIOR_PRESETS, ...customBehaviors]
-      });
-    };
-
     if (isOpen) {
       loadOptions();
     }
@@ -196,21 +215,52 @@ export function ModernEncounterWizard({
     setNewOption('');
     setIsAddOptionOpen(true);
   };
+  
+  const openEditOptionDialog = (type: OptionType, value: string) => {
+    // Prevent editing built-in options
+    const builtInOptions = getBuiltInOptionsForType(type);
+    if (builtInOptions.includes(value)) {
+      return;
+    }
+    
+    setEditingOption({ type, value });
+    setNewOption(value);
+    setIsEditOptionOpen(true);
+  };
 
   const handleAddOption = async () => {
     if (!newOption || !currentOptionType) return;
-
     await storageService.addCustomOption(currentOptionType, newOption);
-
-    setOptions(prev => {
-      const key = `${currentOptionType}s` as keyof typeof options;
-      const newSet = new Set([...prev[key], newOption]);
-      return { ...prev, [key]: Array.from(newSet) };
-    });
-
+    await loadOptions();
     setLastAddedOption({ type: currentOptionType, value: newOption });
     setIsAddOptionOpen(false);
     setNewOption('');
+  };
+  
+  const handleUpdateOption = async () => {
+    if (!newOption || !editingOption) return;
+    await storageService.updateCustomOption(editingOption.type, editingOption.value, newOption);
+    await loadOptions();
+    if (formData[editingOption.type] === editingOption.value) {
+      setFormData(prev => ({ ...prev, [editingOption.type]: newOption }));
+    }
+    setIsEditOptionOpen(false);
+    setNewOption('');
+    setEditingOption(null);
+  };
+  
+  const handleDeleteOption = async (type: OptionType, value: string) => {
+    // Prevent deleting built-in options
+    const builtInOptions = getBuiltInOptionsForType(type);
+    if (builtInOptions.includes(value)) {
+      return;
+    }
+    
+    await storageService.deleteCustomOption(type, value);
+    await loadOptions();
+    if (formData[type] === value) {
+      setFormData(prev => ({ ...prev, [type]: '' }));
+    }
   };
 
   const renderAddOptionDialog = () => (
@@ -238,11 +288,70 @@ export function ModernEncounterWizard({
       </DialogContent>
     </Dialog>
   );
+  
+  const renderEditOptionDialog = () => (
+    <Dialog open={isEditOptionOpen} onOpenChange={setIsEditOptionOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Option</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <Label htmlFor="edit-option-input">Edit {editingOption?.type.replace(/([A-Z])/g, ' $1')} Name</Label>
+          <Input
+            id="edit-option-input"
+            value={newOption}
+            onChange={(e) => setNewOption(e.target.value)}
+            placeholder="Enter new name"
+          />
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={() => setIsEditOptionOpen(false)}>Cancel</Button>
+          <Button type="button" onClick={handleUpdateOption}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const renderStepContent = (type: OptionType, title: string) => {
+    const optionsKey = `${type}s` as keyof typeof options;
+    
+    // Get built-in options for this type
+    const getBuiltInOptions = (optionType: OptionType) => {
+      return getBuiltInOptionsForType(optionType);
+    };
+    
+    return (
+      <div className="p-0 h-full flex flex-col gap-4">
+        <div className="p-4">
+          <Label>{title} *</Label>
+           <p className="text-sm text-muted-foreground">Adding a new record will make it chooseable in the future. Built-in options cannot be edited or deleted.</p>
+        </div>
+        <ModernSelectableList
+          options={options[optionsKey]}
+          value={formData[type]}
+          onChange={(v) => setFormData(p => ({ ...p, [type]: v }))}
+          onAdd={() => openAddOptionDialog(type)}
+          onEdit={(v) => openEditOptionDialog(type, v)}
+          onDelete={(v) => handleDeleteOption(type, v)}
+          placeholder={`Search ${title.toLowerCase()}...`}
+          builtInOptions={getBuiltInOptions(type)}
+        />
+        <div className="p-4 mt-auto flex justify-between">
+          <Button type="button" variant="outline" onClick={back}><ArrowLeft className="h-4 w-4 mr-2"/>Back</Button>
+          <Button type="button" onClick={next} disabled={!isValidStep()}>Next<ArrowRight className="h-4 w-4 ml-2"/></Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onCancel}>
-        <DialogContent className="max-w-full h-full flex flex-col p-0">
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+        <DialogContent 
+          className="max-w-full h-full flex flex-col p-0"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader className="p-4">
             <DialogTitle className="flex items-center gap-2">
               <Cat className="h-5 w-5 text-primary" />
@@ -251,9 +360,17 @@ export function ModernEncounterWizard({
             <DialogDescription>
               Follow the steps to log a new cat encounter.
             </DialogDescription>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-4"
+              onClick={onCancel}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </DialogHeader>
           <div className="relative flex-1 overflow-hidden">
-            <form className="h-full">
+            <div className="h-full">
               <div className={stepClasses(0)}>
                 <div className="p-4 h-full flex flex-col gap-4">
                   <h2 className="text-lg flex items-center gap-2"><Camera className="h-5 w-5"/>Photo</h2>
@@ -267,103 +384,19 @@ export function ModernEncounterWizard({
               </div>
 
               <div className={stepClasses(1)}>
-                <div className="p-4 h-full flex flex-col gap-4">
-                  <Label htmlFor="catColor">Color *</Label>
-                  <div className="flex gap-2">
-                    <Select value={formData.catColor} onValueChange={(v) => setFormData(p => ({ ...p, catColor: v }))}>
-                      <SelectTrigger className="bg-background border-input">
-                        <SelectValue placeholder="Select cat color" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border border-border shadow-lg">
-                        {options.catColors.map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="icon" onClick={() => openAddOptionDialog('catColor')}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="mt-auto flex justify-between">
-                    <Button type="button" variant="outline" onClick={back}><ArrowLeft className="h-4 w-4 mr-2"/>Back</Button>
-                    <Button type="button" onClick={next} disabled={!isValidStep()}>Next<ArrowRight className="h-4 w-4 ml-2"/></Button>
-                  </div>
-                </div>
+                {renderStepContent('catColor', 'Color')}
               </div>
 
               <div className={stepClasses(2)}>
-                <div className="p-4 h-full flex flex-col gap-4">
-                  <Label htmlFor="coatLength">Coat Length *</Label>
-                  <div className="flex gap-2">
-                    <Select value={formData.coatLength} onValueChange={(v) => setFormData(p => ({ ...p, coatLength: v }))}>
-                      <SelectTrigger className="bg-background border-input">
-                        <SelectValue placeholder="Select coat length" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border border-border shadow-lg">
-                        {options.coatLengths.map(l => (
-                          <SelectItem key={l} value={l}>{l}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="icon" onClick={() => openAddOptionDialog('coatLength')}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="mt-auto flex justify-between">
-                    <Button type="button" variant="outline" onClick={back}><ArrowLeft className="h-4 w-4 mr-2"/>Back</Button>
-                    <Button type="button" onClick={next} disabled={!isValidStep()}>Next<ArrowRight className="h-4 w-4 ml-2"/></Button>
-                  </div>
-                </div>
+                {renderStepContent('coatLength', 'Coat Length')}
               </div>
 
               <div className={stepClasses(3)}>
-                <div className="p-4 h-full flex flex-col gap-4">
-                  <Label htmlFor="catType">Type *</Label>
-                  <div className="flex gap-2">
-                    <Select value={formData.catType} onValueChange={(v) => setFormData(p => ({ ...p, catType: v }))}>
-                      <SelectTrigger className="bg-background border-input">
-                        <SelectValue placeholder="Select cat type" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border border-border shadow-lg">
-                        {options.catTypes.map(t => (
-                          <SelectItem key={t} value={t}>{t}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="icon" onClick={() => openAddOptionDialog('catType')}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="mt-auto flex justify-between">
-                    <Button type="button" variant="outline" onClick={back}><ArrowLeft className="h-4 w-4 mr-2"/>Back</Button>
-                    <Button type="button" onClick={next} disabled={!isValidStep()}>Next<ArrowRight className="h-4 w-4 ml-2"/></Button>
-                  </div>
-                </div>
+                {renderStepContent('catType', 'Type')}
               </div>
 
               <div className={stepClasses(4)}>
-                <div className="p-4 h-full flex flex-col gap-4">
-                  <Label htmlFor="behavior">Behavior *</Label>
-                  <div className="flex gap-2">
-                    <Select value={formData.behavior} onValueChange={(v) => setFormData(p => ({ ...p, behavior: v }))}>
-                      <SelectTrigger className="bg-background border-input">
-                        <SelectValue placeholder="Select behavior" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border border-border shadow-lg">
-                        {options.behaviors.map(b => (
-                          <SelectItem key={b} value={b}>{b}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="icon" onClick={() => openAddOptionDialog('behavior')}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="mt-auto flex justify-between">
-                    <Button type="button" variant="outline" onClick={back}><ArrowLeft className="h-4 w-4 mr-2"/>Back</Button>
-                    <Button type="button" onClick={next} disabled={!isValidStep()}>Next<ArrowRight className="h-4 w-4 ml-2"/></Button>
-                  </div>
-                </div>
+                {renderStepContent('behavior', 'Behavior')}
               </div>
 
               <div className={stepClasses(5)}>
@@ -385,11 +418,12 @@ export function ModernEncounterWizard({
                   </div>
                 </div>
               </div>
-            </form>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
       {renderAddOptionDialog()}
+      {renderEditOptionDialog()}
     </>
   );
 }

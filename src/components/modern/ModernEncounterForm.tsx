@@ -183,8 +183,12 @@ export function ModernEncounterForm({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onCancel}>
-      <DialogContent className="max-w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90dvh] flex flex-col p-0">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent 
+        className="max-w-full sm:max-w-2xl h-full sm:h-auto sm:max-h-[90dvh] flex flex-col p-0"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <Cat className="h-5 w-5 text-primary" />

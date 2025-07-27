@@ -3,7 +3,8 @@
  */
 
 import { useState } from 'react';
-import { Palette, Cloud, Download, Upload, Smartphone, Trash2 } from 'lucide-react';
+import { Palette, Cloud, Download, Upload, Smartphone, Trash2, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -219,6 +220,24 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Legal */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Legal
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Link to="/policy" className="block">
+            <Button variant="link" className="p-0 h-auto">Privacy Policy</Button>
+          </Link>
+          <Link to="/tos" className="block">
+            <Button variant="link" className="p-0 h-auto">Terms of Service</Button>
+          </Link>
         </CardContent>
       </Card>
 

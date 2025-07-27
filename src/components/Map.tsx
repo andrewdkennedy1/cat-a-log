@@ -268,12 +268,9 @@ export const Map: FC<ExtendedMapProps> = ({
       // Only trigger location selection if clicking on empty map area
       // Check if the click target is the map container itself (not a marker or other element)
       const target = e.originalEvent?.target as HTMLElement;
-      if (target && (target.classList.contains('leaflet-container') || target.classList.contains('leaflet-zoom-animated'))) {
-        // Additional check to ensure we're not clicking on a marker
-        const isMarkerClick = target.closest('.leaflet-marker-icon') || target.closest('.paw-marker');
-        if (!isMarkerClick) {
-          onLocationSelectRef.current(e.latlng.lat, e.latlng.lng);
-        }
+      const isMarkerClick = target.closest('.leaflet-marker-icon') || target.closest('.paw-marker');
+      if (!isMarkerClick) {
+        onLocationSelectRef.current(e.latlng.lat, e.latlng.lng);
       }
     };
 

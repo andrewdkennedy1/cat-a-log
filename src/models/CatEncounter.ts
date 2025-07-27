@@ -7,22 +7,65 @@ import { generateUUID, getCurrentTimestamp } from '../utils/dataUtils';
 
 // Standardized cat colors
 export const CAT_COLORS = [
+  'Black',
+  'White',
+  'Gray',
+  'Orange/Ginger',
+  'Brown/Chocolate',
+  'Cream',
+  'Calico',
+  'Tortoiseshell',
+  'Tabby',
+  'Tuxedo',
+  'Siamese',
   'Mixed/Other'
 ] as const;
 
 // Standardized coat lengths
 export const COAT_LENGTHS = [
-  'Shorthair'
+  'Shorthair',
+  'Medium Hair',
+  'Longhair',
+  'Hairless'
 ] as const;
 
 // Standardized cat types
 export const CAT_TYPES = [
+  'Domestic Shorthair',
+  'Domestic Longhair',
+  'Maine Coon',
+  'Persian',
+  'Siamese',
+  'British Shorthair',
+  'Russian Blue',
+  'Bengal',
+  'Ragdoll',
+  'Scottish Fold',
+  'Abyssinian',
+  'American Shorthair',
+  'Feral',
+  'Stray',
   'Unknown'
 ] as const;
 
 // Behavior presets
 export const BEHAVIOR_PRESETS = [
-  'Curious'
+  'Friendly',
+  'Curious',
+  'Shy/Timid',
+  'Aggressive',
+  'Playful',
+  'Sleepy/Resting',
+  'Hunting',
+  'Eating',
+  'Grooming',
+  'Hiding',
+  'Vocal/Meowing',
+  'Purring',
+  'Hissing',
+  'Running Away',
+  'Approaching',
+  'Indifferent'
 ] as const;
 
 export type CatColor = typeof CAT_COLORS[number];

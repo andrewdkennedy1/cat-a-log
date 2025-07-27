@@ -415,6 +415,78 @@ export class StorageService implements IStorageService {
     }
   }
 
+  /**
+   * Update a custom option for a specific field
+   */
+  async updateCustomOption(field: 'catColor' | 'coatLength' | 'catType' | 'behavior', oldValue: string, newValue: string): Promise<void> {
+    const preferences = await this.getPreferences();
+    let updated = false;
+
+    const updateField = (arr: string[]) => {
+      const index = arr.indexOf(oldValue);
+      if (index > -1) {
+        arr[index] = newValue;
+        updated = true;
+      }
+      return arr;
+    };
+
+    switch (field) {
+      case 'catColor':
+        preferences.customCatColors = updateField(preferences.customCatColors);
+        break;
+      case 'coatLength':
+        preferences.customCoatLengths = updateField(preferences.customCoatLengths);
+        break;
+      case 'catType':
+        preferences.customCatTypes = updateField(preferences.customCatTypes);
+        break;
+      case 'behavior':
+        preferences.customBehaviors = updateField(preferences.customBehaviors);
+        break;
+    }
+
+    if (updated) {
+      await this.savePreferences(preferences);
+    }
+  }
+
+  /**
+   * Delete a custom option for a specific field
+   */
+  async deleteCustomOption(field: 'catColor' | 'coatLength' | 'catType' | 'behavior', value: string): Promise<void> {
+    const preferences = await this.getPreferences();
+    let updated = false;
+
+    const deleteField = (arr: string[]) => {
+      const index = arr.indexOf(value);
+      if (index > -1) {
+        arr.splice(index, 1);
+        updated = true;
+      }
+      return arr;
+    };
+
+    switch (field) {
+      case 'catColor':
+        preferences.customCatColors = deleteField(preferences.customCatColors);
+        break;
+      case 'coatLength':
+        preferences.customCoatLengths = deleteField(preferences.customCoatLengths);
+        break;
+      case 'catType':
+        preferences.customCatTypes = deleteField(preferences.customCatTypes);
+        break;
+      case 'behavior':
+        preferences.customBehaviors = deleteField(preferences.customBehaviors);
+        break;
+    }
+
+    if (updated) {
+      await this.savePreferences(preferences);
+    }
+  }
+
   // Helper Methods
 
   /**
