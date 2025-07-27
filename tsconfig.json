@@ -1,0 +1,18 @@
+{
+	"files": [],
+	"references": [
+		{
+			"path": "./tsconfig.app.json"
+		},
+		{
+			"path": "./tsconfig.node.json"
+		},
+		{
+			"path": "./tsconfig.worker.json"
+		}
+	],
+	"compilerOptions": {
+		// This is a solution-style tsconfig.json.
+		// All options should be configured in the referenced projects.
+	}
+}

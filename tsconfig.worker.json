@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "node",
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["worker", "worker/env.d.ts"]
+}
