@@ -2,221 +2,52 @@
 
 ## Overview
 
-This document describes the complete Google Drive synchronization implementation for the CAT-a-log application. The sync system allows users to backup and restore their cat encounter data across multiple devices using their Google Drive account.
+This document describes the Google Drive synchronization implementation for the CAT-a-log application. The system uses the Google Drive `appDataFolder` to securely store and sync user data across devices.
 
 ## Features
 
-✅ **OAuth 2.0 Authentication** - Secure Google account login
-✅ **Automatic Sync** - Background synchronization every 5 minutes
-✅ **Manual Sync Controls** - Backup and restore buttons in settings
-✅ **Real-time Status** - Sync status indicator in the bottom navigation
-✅ **Error Handling** - Comprehensive error handling and user feedback
-✅ **Token Persistence** - Automatic token restoration on app restart
-✅ **Folder Structure** - Organized file storage in Google Drive
-✅ **Data Versioning** - Metadata tracking for sync operations
+- ✅ **OAuth 2.0 Authentication** - Securely connects to the user's Google account.
+- ✅ **Application Data Folder** - Uses the hidden `appDataFolder` for private, app-specific data storage.
+- ✅ **Automatic Sync** - Periodically syncs data in the background.
+- ✅ **Manual Sync** - Allows users to trigger a sync manually.
+- ✅ **Photo Synchronization** - Syncs encounter photos as individual files.
+- ✅ **Soft Deletes** - Correctly propagates deletions across devices.
+- ✅ **Conflict-Free Merging** - Merges encounters and custom preferences without data loss.
 
 ## Architecture
 
 ### Core Components
 
-1. **GoogleDriveService** (`src/services/GoogleDriveService.ts`)
-   - Handles Google Drive API interactions
-   - Manages folder creation and file operations
-   - Provides authentication methods
-
-2. **SyncService** (`src/services/SyncService.ts`)
-   - Orchestrates sync operations
-   - Manages automatic sync scheduling
-   - Emits sync status events
-
-3. **SyncStatus** (`src/components/modern/SyncStatus.tsx`)
-   - Visual sync status indicator
-   - Shows connection state and last sync time
-
-4. **ModernGoogleLogin** (`src/components/modern/ModernGoogleLogin.tsx`)
-   - Google authentication UI component
-   - Connection/disconnection controls
+1.  **`GoogleDriveService.ts`**: Manages all direct interactions with the Google Drive API, including authentication and file operations within the `appDataFolder`.
+2.  **`SyncService.ts`**: Orchestrates the entire sync process, handling data merging, photo uploads/downloads, and deletion propagation.
+3.  **`useUser.ts`**: Manages user state, including the Google Drive service instance and authentication tokens.
 
 ### Data Flow
 
-```
-User Action → SyncService → GoogleDriveService → Google Drive API
-     ↓              ↓              ↓
-App State ← Event Emitter ← Status Updates
-```
+The synchronization process follows this general flow:
+
+1.  **Authentication**: The user authenticates with their Google account, granting the app access to the `appDataFolder`.
+2.  **Initialization**: The `GoogleDriveService` is initialized with the user's access token.
+3.  **Sync Trigger**: A sync is triggered either automatically or manually.
+4.  **Data Fetch**: The `SyncService` fetches local data from IndexedDB and remote data from the `appDataFolder`.
+5.  **Data Merge**: The service merges encounters and preferences, resolving conflicts and handling deletions.
+6.  **Photo Sync**: Photos are uploaded or downloaded as needed.
+7.  **Data Upload**: The merged data is uploaded back to the `appDataFolder`.
 
 ## Google Drive Structure
 
-The app creates the following structure in the user's Google Drive:
+All data is stored in the hidden `appDataFolder`, which is not visible to the user in their Google Drive. The structure is flat to comply with API limitations:
 
-```
-Google Drive/
-└── CAT-a-log-data/
-    ├── encounters.json (encounter metadata)
-    └── photos/
-        ├── photo1.jpg
-        ├── photo2.jpg
-        └── ...
-```
+-   `app-data.json`: A single JSON file containing all encounter data and user preferences.
+-   `<photo_id>.jpg`: Individual photo files, named with their unique IDs.
 
 ## Configuration
 
-### OAuth Client Configuration
+-   **Client ID**: Stored in an environment variable (`VITE_GOOGLE_CLIENT_ID`).
+-   **Scope**: `https://www.googleapis.com/auth/drive.appdata`
 
-The app uses the following OAuth client configuration:
+## Security
 
-- **Client ID**: `304619344995-56ll4mek5dnu6lo4d8j9tn44ffqhlmel.apps.googleusercontent.com`
-- **Scope**: `https://www.googleapis.com/auth/drive.file`
-- **Authorized Origins**: `https://log.catcafe.space`
-
-### Required HTML Setup
-
-The following scripts must be loaded in `index.html`:
-
-```html
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://apis.google.com/js/api.js" async defer></script>
-```
-
-## API Usage
-
-### Authentication
-
-```typescript
-// Authenticate user
-const token = await GoogleDriveService.authenticate();
-
-// Initialize drive service
-const driveService = new GoogleDriveService(token);
-await driveService.init();
-
-// Set up sync service
-syncService.setDriveService(driveService);
-```
-
-### Sync Operations
-
-```typescript
-// Manual backup
-await syncService.syncToCloud();
-
-// Manual restore
-const encounters = await syncService.restore();
-
-// Enable/disable auto-sync
-syncService.setAutoSync(true);
-```
-
-### Status Monitoring
-
-```typescript
-// Listen for sync events
-const unsubscribe = syncService.on((status, error) => {
-  console.log('Sync status:', status);
-  if (error) console.error('Sync error:', error);
-});
-```
-
-## Error Handling
-
-The implementation includes comprehensive error handling:
-
-1. **Authentication Errors**
-   - Invalid tokens
-   - Expired sessions
-   - User cancellation
-
-2. **Network Errors**
-   - Connection timeouts
-   - API rate limits
-   - Offline scenarios
-
-3. **Data Errors**
-   - Corrupted files
-   - Invalid JSON
-   - Missing permissions
-
-## Security Considerations
-
-1. **Token Storage**: Access tokens are stored in localStorage and cleared on logout
-2. **Scope Limitation**: Only requests `drive.file` scope (not full drive access)
-3. **Data Isolation**: Creates dedicated app folder structure
-4. **Token Revocation**: Properly revokes tokens on logout
-
-## Testing
-
-Run the Google Drive service tests:
-
-```bash
-npm test src/services/__tests__/GoogleDriveService.test.ts
-```
-
-The test suite covers:
-- Authentication flow
-- Service initialization
-- File operations
-- Error scenarios
-
-## Troubleshooting
-
-### Common Issues
-
-1. **"Google Drive API access token is required"**
-   - User needs to authenticate first
-   - Check if token is properly stored
-
-2. **"Google API client not loaded"**
-   - Ensure Google API scripts are loaded
-   - Check network connectivity
-
-3. **"Failed to initialize Google Drive"**
-   - Check OAuth client configuration
-   - Verify authorized origins
-
-4. **Sync not working**
-   - Check auto-sync is enabled in settings
-   - Verify user is authenticated
-   - Check browser console for errors
-
-### Debug Mode
-
-Enable debug logging by setting:
-
-```javascript
-localStorage.setItem('debug', 'true');
-```
-
-## Future Enhancements
-
-Potential improvements for the sync system:
-
-1. **Conflict Resolution** - Handle simultaneous edits from multiple devices
-2. **Incremental Sync** - Only sync changed data
-3. **Photo Compression** - Optimize photo storage
-4. **Offline Queue** - Queue sync operations when offline
-5. **Backup Scheduling** - User-configurable sync intervals
-
-## Dependencies
-
-The sync implementation relies on:
-
-- Google APIs JavaScript client library
-- Google Identity Services (GSI)
-- React hooks for state management
-- IndexedDB for local storage
-
-## Performance
-
-- **Initial Sync**: ~2-5 seconds for typical datasets
-- **Auto Sync**: Minimal impact, runs in background
-- **Photo Upload**: Depends on image size and connection speed
-- **Memory Usage**: Efficient with streaming for large files
-
-## Compliance
-
-The implementation follows:
-
-- Google Drive API best practices
-- OAuth 2.0 security standards
-- GDPR data protection requirements
-- Progressive Web App standards
+-   **Token Storage**: Access tokens are stored in `localStorage` and are cleared on logout.
+-   **Scope Limitation**: The app only requests access to the `appDataFolder`, ensuring it cannot access any other user files.
+-   **Data Isolation**: All data is stored in the hidden `appDataFolder`, which is private to the application.
