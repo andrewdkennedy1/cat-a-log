@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ModernGoogleLogin } from './ModernGoogleLogin';
+import { InstallPWAButton } from './InstallPWAButton';
 import { useUser } from '@/hooks/useUser';
 import { syncService } from '@/services/SyncService';
 import { storageService } from '@/services/StorageService';
@@ -241,6 +242,22 @@ export function ModernSettings({ preferences, onPreferencesChange, onClose }: Mo
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* PWA Install */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5" />
+            Install App
+          </CardTitle>
+          <CardDescription>
+            Install CAT-a-log on your device for a better experience
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <InstallPWAButton />
         </CardContent>
       </Card>
 

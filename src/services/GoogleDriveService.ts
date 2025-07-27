@@ -168,7 +168,7 @@ export class GoogleDriveService {
     return blob;
   }
 
-  public authenticate(): Promise<string> {
+  public static authenticate(): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
         const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
@@ -178,7 +178,6 @@ export class GoogleDriveService {
             if (response.error) {
               return reject(response);
             }
-            this.accessToken = response.access_token;
             resolve(response.access_token);
           },
         });
@@ -189,9 +188,9 @@ export class GoogleDriveService {
     });
   }
 
-  public logout() {
-    if (this.accessToken) {
-      (window as any).google.accounts.oauth2.revoke(this.accessToken, () => {});
+  public static logout(token: string) {
+    if (token) {
+      (window as any).google.accounts.oauth2.revoke(token, () => {});
     }
   }
 }

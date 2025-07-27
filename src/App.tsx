@@ -1,6 +1,5 @@
 import { AppProvider } from './context/AppContext';
 import { ModernApp } from './components/modern/ModernApp';
-import { AuthHandler } from './components/AuthHandler';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useSnackbar } from './hooks/useSnackbar';
 import { Snackbar } from './components/Snackbar';
@@ -11,7 +10,6 @@ function AppContent() {
 
   return (
     <AppProvider showSnackbar={showSnackbar}>
-      <AuthHandler />
       <ModernApp />
       {snackbar && (
         <Snackbar

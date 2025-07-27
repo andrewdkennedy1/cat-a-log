@@ -18,8 +18,7 @@ export function ModernGoogleLogin() {
   const handleLogin = async () => {
     setIsLoading(true);
     try {
-      const driveService = new GoogleDriveService('');
-      const token = await driveService.authenticate();
+      const token = await GoogleDriveService.authenticate();
       setGoogleToken(token);
       setAuthenticated(true);
       await initializeGoogleDrive(token);
@@ -33,8 +32,7 @@ export function ModernGoogleLogin() {
 
   const handleLogout = () => {
     if (googleToken) {
-      const driveService = new GoogleDriveService(googleToken);
-      driveService.logout();
+      GoogleDriveService.logout(googleToken);
     }
     logout();
   };

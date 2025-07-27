@@ -166,7 +166,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
           googleToken: action.payload
         }
       };
-      
+
     case 'SET_GOOGLE_DRIVE_SERVICE':
       return {
         ...state,
@@ -248,7 +248,7 @@ export function AppProvider({ children, showSnackbar }: AppProviderProps) {
       }
     };
     loadEncounters();
-  }, []); // Only run once on mount
+  }, [showSnackbar]); // Include showSnackbar dependency
 
   // Enhanced dispatch that also saves to storage
   const enhancedDispatch = (action: AppAction) => {

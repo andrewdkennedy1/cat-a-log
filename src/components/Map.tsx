@@ -237,7 +237,7 @@ export const Map: FC<ExtendedMapProps> = ({
     const map = L.map(mapRef.current, {
       center: center,
       zoom: zoom,
-      zoomControl: true,
+      zoomControl: false,
       attributionControl: true
     });
 

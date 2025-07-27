@@ -91,18 +91,18 @@ export function useUser() {
     preferences,
     googleDriveService,
     googleDriveStatus,
-    
+
     // Computed state
     hasGoogleToken,
     canSync,
-    
+
     // Authentication actions
     setAuthenticated,
     login,
     logout,
     setGoogleToken,
     initializeGoogleDrive,
-    
+
     // Preferences actions
     setPreferences,
     updatePreferences,

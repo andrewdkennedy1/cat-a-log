@@ -3,62 +3,29 @@
  */
 
 import { storageService } from './StorageService';
-import { googleDriveService } from './GoogleDriveService';
+import { GoogleDriveService } from './GoogleDriveService';
 
 class SyncService {
-  private static instance: SyncService;
+  private driveService: GoogleDriveService | null = null;
 
-  private constructor() {
-    // Private constructor to prevent direct instantiation
-  }
-
-  public static getInstance(): SyncService {
-    if (!SyncService.instance) {
-      SyncService.instance = new SyncService();
-    }
-    return SyncService.instance;
-  }
-
-  public async authenticateGoogle(): Promise<boolean> {
-    try {
-      await googleDriveService.authenticate();
-      return true;
-    } catch (error) {
-      console.error('Google authentication failed:', error);
-      return false;
-    }
+  public setDriveService(driveService: GoogleDriveService) {
+    this.driveService = driveService;
   }
 
   public isAuthenticated(): boolean {
-    return googleDriveService.isAuthenticated();
-  }
-
-  public async refreshToken(): Promise<boolean> {
-    try {
-      await googleDriveService.authenticate();
-      return true;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      return false;
-    }
+    return !!this.driveService;
   }
 
   public async syncToCloud(): Promise<void> {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated with Google Drive');
+    if (!this.driveService) {
+      throw new Error('Google Drive service not initialized');
     }
 
     console.log('Starting sync to cloud...');
     
     try {
-      // Export data from storage service
-      const data = await storageService.exportData();
-      
-      // Create backup filename with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `cat-a-log-backup-${timestamp}.json`;
-      
-      await googleDriveService.uploadJsonFile(fileName, data);
+      const encounters = await storageService.getEncounters();
+      await this.driveService.saveEncounters(encounters);
       
       console.log('Sync to cloud complete');
     } catch (error) {
@@ -68,22 +35,16 @@ class SyncService {
   }
 
   public async syncFromCloud(): Promise<void> {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated with Google Drive');
+    if (!this.driveService) {
+      throw new Error('Google Drive service not initialized');
     }
 
     console.log('Starting sync from cloud...');
     
     try {
-      const remoteFile = await googleDriveService.getLatestFile();
-      
-      if (remoteFile) {
-        console.log('Restoring from:', remoteFile.name);
-        await storageService.importData(remoteFile.content);
-        console.log('Sync from cloud complete');
-      } else {
-        console.log('No backup file found in cloud');
-      }
+      const encounters = await this.driveService.loadEncounters();
+      await storageService.importData(JSON.stringify({ encounters }));
+      console.log('Sync from cloud complete');
     } catch (error) {
       console.error('Sync from cloud failed:', error);
       throw error;
@@ -91,37 +52,31 @@ class SyncService {
   }
 
   public async checkCloudData(): Promise<{ lastModified: Date; hasData: boolean }> {
-    if (!this.isAuthenticated()) {
-      throw new Error('Not authenticated with Google Drive');
+    if (!this.driveService) {
+      throw new Error('Google Drive service not initialized');
     }
 
     try {
-      const remoteFile = await googleDriveService.getLatestFile();
-      
-      if (remoteFile) {
-        // Parse the backup to get the timestamp
-        const backup = JSON.parse(remoteFile.content);
-        return {
-          lastModified: new Date(backup.exportedAt || new Date()),
-          hasData: true
-        };
-      } else {
-        return {
-          lastModified: new Date(0),
-          hasData: false
-        };
+      const encounters = await this.driveService.loadEncounters();
+      if (encounters.length > 0) {
+        const lastModified = encounters.reduce((latest, e) => {
+          const d = new Date(e.updatedAt);
+          return d > latest ? d : latest;
+        }, new Date(0));
+        return { lastModified, hasData: true };
       }
+      return { lastModified: new Date(0), hasData: false };
     } catch (error) {
       console.error('Failed to check cloud data:', error);
       throw error;
     }
   }
 
-  public async resolveConflicts(localData: any, cloudData: any): Promise<any> {
+  public async resolveConflicts(localData: unknown, cloudData: unknown): Promise<unknown> {
     // Simple conflict resolution: use the most recent data
     // In a real app, this would be more sophisticated
-    const localTime = new Date(localData.exportedAt || 0);
-    const cloudTime = new Date(cloudData.exportedAt || 0);
+    const localTime = new Date((localData as { exportedAt?: string })?.exportedAt || 0);
+    const cloudTime = new Date((cloudData as { exportedAt?: string })?.exportedAt || 0);
     
     return cloudTime > localTime ? cloudData : localData;
   }
@@ -167,4 +122,4 @@ class SyncService {
   }
 }
 
-export const syncService = SyncService.getInstance();
+export const syncService = new SyncService();

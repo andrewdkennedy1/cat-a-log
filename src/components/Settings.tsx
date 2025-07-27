@@ -1,6 +1,5 @@
 import type { ChangeEvent } from 'react';
 import type { UserPreferences } from '../types';
-import { GoogleLogin } from './GoogleLogin';
 import { syncService } from '../services/SyncService';
 import { storageService } from '../services/StorageService';
 import { useUser } from '../hooks/useUser';
@@ -62,13 +61,6 @@ export function Settings({ preferences, onPreferencesChange, showSnackbar }: Set
     }
   };
 
-  const handleLoginSuccess = () => {
-    showSnackbar('Successfully connected to Google Drive!', 'success');
-  };
-
-  const handleLoginError = () => {
-    showSnackbar('Failed to connect to Google Drive. Please try again.', 'error');
-  };
 
   return (
     <div className="settings">
@@ -92,12 +84,6 @@ export function Settings({ preferences, onPreferencesChange, showSnackbar }: Set
 
       <div className="settings-section">
         <h4>Google Drive Sync</h4>
-        <div className="settings-item">
-          <GoogleLogin 
-            onSuccess={handleLoginSuccess}
-            onError={handleLoginError}
-          />
-        </div>
         
         {isAuthenticated && hasGoogleToken && (
           <>

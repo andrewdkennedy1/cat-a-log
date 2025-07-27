@@ -3,11 +3,11 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Heart, Camera, Settings } from 'lucide-react';
+import { Plus, Heart, Camera, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+
 import { ModernEncounterForm } from './ModernEncounterForm';
 import { ModernSettings } from './ModernSettings';
 import { ModernEncounterCard } from './ModernEncounterCard';
@@ -28,7 +28,7 @@ export function ModernApp() {
     updateEncounter,
     deleteEncounter
   } = useEncounters();
-  
+
   const {
     mapCenter,
     mapZoom,
@@ -45,7 +45,7 @@ export function ModernApp() {
   const [editingEncounter, setEditingEncounter] = useState<CatEncounter | undefined>();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'map' | 'list' | 'grid'>('map');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm] = useState('');
   const [filteredEncounters, setFilteredEncounters] = useState<CatEncounter[]>([]);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
 
@@ -149,17 +149,19 @@ export function ModernApp() {
   const renderListView = () => (
     <div className="h-full overflow-y-auto p-4 space-y-4 pb-24">
       {filteredEncounters.length === 0 ? (
-        <Card className="p-8 text-center">
-          <CardContent>
-            <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No encounters found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchTerm ? 'Try adjusting your search terms' : 'Start by adding your first cat encounter!'}
-            </p>
-            <Button onClick={() => openForm()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Encounter
-            </Button>
+        <Card className="text-center">
+          <CardContent className="p-0">
+            <div className="pt-6">
+              <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No encounters found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm ? 'Try adjusting your search terms' : 'Start by adding your first cat encounter!'}
+              </p>
+              <Button onClick={() => openForm()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Encounter
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -176,40 +178,65 @@ export function ModernApp() {
     </div>
   );
 
-  const renderGridView = () => (
-    <div className="h-full overflow-y-auto p-4 pb-24">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filteredEncounters.length === 0 ? (
-          <div className="col-span-full">
-            <Card className="p-8 text-center">
-              <CardContent>
-                <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No encounters found</h3>
-                <p className="text-muted-foreground mb-4">
-                  {searchTerm ? 'Try adjusting your search terms' : 'Start documenting your cat encounters!'}
-                </p>
-                <Button onClick={() => openForm()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Encounter
+  const renderGridView = () => {
+    // Filter encounters that have photos for Instagram-like grid
+    const encountersWithPhotos = filteredEncounters.filter(encounter =>
+      encounter.photoBlobId && photoUrls[encounter.photoBlobId]
+    );
+
+    return (
+      <div className="h-full overflow-y-auto p-2 pb-24">
+        <div className="grid grid-cols-3 gap-1">
+          {encountersWithPhotos.length === 0 ? (
+            <div className="col-span-3 flex flex-col items-center justify-center min-h-[50vh]">
+              <Camera className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No photos yet</h3>
+              <p className="text-muted-foreground text-center mb-4 max-w-sm">
+                {searchTerm ? 'No photos match your search' : 'Start taking photos of your cat encounters to see them here!'}
+              </p>
+              <Button onClick={() => openForm()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Photo
+              </Button>
+            </div>
+          ) : (
+            encountersWithPhotos.map((encounter) => (
+              <div
+                key={encounter.id}
+                className="aspect-square relative group cursor-pointer overflow-hidden bg-muted"
+                onClick={() => handleEncounterEdit(encounter)}
+              >
+                <img
+                  src={photoUrls[encounter.photoBlobId!]}
+                  alt={`${encounter.catType} - ${encounter.catColor}`}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                />
+                {/* Overlay with basic info on hover */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="text-white text-center text-sm">
+                    <div className="font-medium capitalize">{encounter.catType}</div>
+                    <div className="text-xs opacity-90 capitalize">{encounter.catColor}</div>
+                  </div>
+                </div>
+                {/* Delete button in top right */}
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEncounterDelete(encounter);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
                 </Button>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          filteredEncounters.map((encounter) => (
-            <ModernEncounterCard
-              key={encounter.id}
-              encounter={encounter}
-              onEdit={handleEncounterEdit}
-              onDelete={handleEncounterDelete}
-              compact
-              photoUrl={encounter.photoBlobId ? photoUrls[encounter.photoBlobId] : null}
-            />
-          ))
-        )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="h-[100dvh] w-screen overflow-hidden bg-background relative">
@@ -225,38 +252,12 @@ export function ModernApp() {
 
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-40">
-        <div className="flex items-center justify-between p-4 h-20" style={{ paddingTop: `calc(env(safe-area-inset-top) + 1rem)` }}>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Heart className="h-6 w-6 text-primary" />
-              <h1 className="font-bold text-xl">CAT-a-log</h1>
-            </div>
+        <div className="flex items-center justify-center p-4 h-16" style={{ paddingTop: `calc(env(safe-area-inset-top) + 0.5rem)` }}>
+          <div className="flex items-center gap-2">
+            <h1 className="font-bold text-xl">CAT-a-log</h1>
             <span className="text-sm text-muted-foreground bg-muted px-3 py-1 rounded-full hidden sm:inline-block">
               {encounters.length} encounters
             </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Search */}
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-48"
-              />
-            </div>
-            
-            {/* Settings Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSettingsOpen(true)}
-              className="rounded-full"
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
           </div>
         </div>
       </header>
@@ -275,10 +276,10 @@ export function ModernApp() {
             zoom={mapZoom}
           />
         </div>
-        
+
         {/* List and Grid views overlay the map */}
         {viewMode !== 'map' && (
-          <div className="absolute inset-0 z-20 bg-background pt-20">
+          <div className="absolute inset-0 z-20 bg-background pt-16">
             {viewMode === 'list' ? renderListView() : renderGridView()}
           </div>
         )}
@@ -292,6 +293,7 @@ export function ModernApp() {
           setEditingEncounter(undefined);
           openForm();
         }}
+        onSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Dialogs - Outside main container to ensure proper z-index */}
